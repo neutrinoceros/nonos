@@ -1283,7 +1283,7 @@ def process_field(
         print_warn(
             "plot not optimized for now in the (R,z) plane in polar.\nCheck in cartesian coordinates to be sure"
         )
-    fig = plt.figure()
+    fig = plt.figure(constrained_layout=True)
     ax = fig.add_subplot(111, polar=polar)
 
     # plot the field
