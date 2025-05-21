@@ -17,24 +17,23 @@ class IdefixVTKReader:
     @staticmethod
     def read(file: PathT, /) -> IniData:
         class IdefixIniOutput:
-            def __init__(self, *, vtk, **_kwargs) -> None:
-                self.vtk = float(vtk)
+            def __init__(self, *, vtk: list, **_kwargs) -> None:
+                self.vtk = float(vtk[0])
 
         class IdefixIniHydro:
-            def __init__(self, **kwargs) -> None:
-                if "rotation" in kwargs:
+            def __init__(self, rotation: list = [0.0]) -> None:  # noqa: B006
+                self.rotation = float(rotation[0])
+                if self.rotation != 0.0:
                     self.frame = FrameType.CONSTANT_ROTATION
-                    self.rotation = float(kwargs["rotation"])
                 else:
                     self.frame = FrameType.FIXED_FRAME
-                    self.rotation = 0.0
 
         class IdefixIni:
             def __init__(self, *, Hydro, Output, **_kwargs) -> None:
-                self.hydro = IdefixIniHydro(**Hydro)
-                self.output = IdefixIniOutput(**Output)
+                self.hydro = IdefixIniHydro(rotation=Hydro.get("rotation", [0.0]))
+                self.output = IdefixIniOutput(vtk=Output["vtk"])
 
-        meta = inifix.load(file)
+        meta = inifix.load(file, sections="require", parse_scalars_as_lists=True)
         ini = IdefixIni(**meta)
 
         return IniData(
@@ -42,7 +41,7 @@ class IdefixVTKReader:
             frame=ini.hydro.frame,
             rotational_rate=ini.hydro.rotation,
             output_time_interval=ini.output.vtk,
-            meta=meta,
+            meta=inifix.load(file, sections="require", skip_validation=True),
         )
 
 
@@ -51,14 +50,14 @@ class PlutoVTKReader:
     @staticmethod
     def read(file: PathT, /) -> IniData:
         class PlutoIniOutput:
-            def __init__(self, *, vtk, **_kwargs) -> None:
-                self.vtk = float(list(vtk)[0])
+            def __init__(self, *, vtk: list, **_kwargs) -> None:
+                self.vtk = float(vtk[0])
 
         class PlutoIni:
             def __init__(self, **kwargs) -> None:
                 self.output = PlutoIniOutput(**kwargs["Static Grid Output"])
 
-        meta = inifix.load(file)
+        meta = inifix.load(file, sections="require", parse_scalars_as_lists=True)
         ini = PlutoIni(**meta)
 
         return IniData(
@@ -66,7 +65,7 @@ class PlutoVTKReader:
             frame=FrameType.FIXED_FRAME,
             rotational_rate=0.0,
             output_time_interval=ini.output.vtk,
-            meta=meta,
+            meta=inifix.load(file, sections="require", skip_validation=True),
         )
 
 
@@ -78,30 +77,31 @@ class Fargo3DReader:
             def __init__(
                 self,
                 *,
-                NINTERM,
-                DT,
-                FRAME: str = "F",
-                OMEGAFRAME: float = 0.0,
+                NINTERM: list,
+                DT: list,
+                FRAME: list = ["F"],  # noqa: B006
+                OMEGAFRAME: list = [0.0],  # noqa: B006
                 **_kwargs,
             ) -> None:
-                self.NINTERM = int(NINTERM)
-                self.DT = float(DT)
+                self.NINTERM = int(NINTERM[0])
+                self.DT = float(DT[0])
                 self.FRAME: FrameType
                 self.OMEGAFRAME: float
 
-                if FRAME == "F":
-                    self.OMEGAFRAME = float(OMEGAFRAME)
+                FRAME_unwrapped = str(FRAME[0])
+                if FRAME_unwrapped == "F":
+                    self.OMEGAFRAME = float(OMEGAFRAME[0])
                     if self.OMEGAFRAME == 0.0:
                         self.FRAME = FrameType.FIXED_FRAME
                     else:
                         self.FRAME = FrameType.CONSTANT_ROTATION
-                elif FRAME == "C":
+                elif FRAME_unwrapped == "C":
                     self.FRAME = FrameType.PLANET_COROTATION
                     self.OMEGAFRAME = float("nan")
                 else:
                     raise NotImplementedError
 
-        meta = inifix.load(file)
+        meta = inifix.load(file, sections="forbid", parse_scalars_as_lists=True)
         ini = Fargo3DIni(**meta)
 
         return IniData(
@@ -109,7 +109,7 @@ class Fargo3DReader:
             frame=ini.FRAME,
             rotational_rate=ini.OMEGAFRAME,
             output_time_interval=ini.NINTERM * ini.DT,
-            meta=meta,
+            meta=inifix.load(file, sections="forbid", skip_validation=True),
         )
 
 
@@ -121,30 +121,32 @@ class FargoADSGReader:
             def __init__(
                 self,
                 *,
-                Ninterm,
-                DT,
-                Frame: str = "F",
-                OmegaFrame: float = 0.0,
+                Ninterm: list,
+                DT: list,
+                Frame: list = ["F"],  # noqa: B006
+                OmegaFrame: list = [0.0],  # noqa: B006
                 **_kwargs,
             ) -> None:
-                self.NINTERM = int(Ninterm)
-                self.DT = float(DT)
+                self.NINTERM = int(Ninterm[0])
+                self.DT = float(DT[0])
                 self.FRAME: FrameType
                 self.OMEGAFRAME: float
 
-                if Frame == "F":
-                    self.OMEGAFRAME = float(OmegaFrame)
+                Frame_unwrapped = str(Frame[0])
+
+                if Frame_unwrapped == "F":
+                    self.OMEGAFRAME = float(OmegaFrame[0])
                     if self.OMEGAFRAME == 0.0:
                         self.FRAME = FrameType.FIXED_FRAME
                     else:
                         self.FRAME = FrameType.CONSTANT_ROTATION
-                elif Frame == "C":
+                elif Frame_unwrapped == "C":
                     self.FRAME = FrameType.PLANET_COROTATION
                     self.OMEGAFRAME = float("nan")
                 else:
                     raise NotImplementedError
 
-        meta = inifix.load(file)
+        meta = inifix.load(file, sections="forbid", parse_scalars_as_lists=True)
         ini = FargoADSGIni(**meta)
 
         return IniData(
@@ -152,5 +154,5 @@ class FargoADSGReader:
             frame=ini.FRAME,
             rotational_rate=ini.OMEGAFRAME,
             output_time_interval=ini.NINTERM * ini.DT,
-            meta=meta,
+            meta=inifix.load(file, sections="forbid", skip_validation=True),
         )

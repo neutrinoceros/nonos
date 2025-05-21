@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Any
 
 import inifix
 import numpy as np
-from packaging.version import Version
 from tqdm import tqdm
 
 from nonos.api import GasDataSet
@@ -52,7 +51,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.figure import Figure
 
 NONOS_VERSION = version("nonos")
-INIFIX_GE_5_0 = Version(version("inifix")) >= Version("5.0.0")
 
 KNOWN_CMAP_PACKAGE_PREFIXES = {
     "cb": "cblind",
@@ -503,12 +501,7 @@ def main(argv: list[str] | None = None) -> int:
             conf_repr[key] = args[key]
         print(f"# Generated with nonos {NONOS_VERSION}")
         s = inifix.dumps(conf_repr)
-        if INIFIX_GE_5_0:
-            print(inifix.format_string(s))
-        else:
-            from inifix.format import iniformat
-
-            print(iniformat(s))
+        print(inifix.format_string(s))
         return 0
 
     try:
