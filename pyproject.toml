@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "nonos"
-version = "0.17.0"
+version = "0.18.0"
 description = "A tool to analyze results from idefix/pluto simulations (for protoplanetary disks more specifically)"
 authors = [
     { name = "G. Wafflard-Fernandez" },

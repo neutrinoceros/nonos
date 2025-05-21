@@ -1,7 +1,6 @@
 # nonos
 [![PyPI](https://img.shields.io/pypi/v/nonos.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/nonos/)
 [![Documentation Status](https://readthedocs.org/projects/nonos/badge/?version=latest)](https://nonos.readthedocs.io/en/latest/?badge=latest)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/volodia99/nonos/main.svg)](https://results.pre-commit.ci/badge/github/volodia99/nonos/main.svg)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://github.com/charliermarsh/ruff)
 
 nonos is a 2D visualization command line application for planet-disk numerical simulations, as well as a Python library. It works with vtk-formatted data from Pluto and Idefix, and dat-formatted data for Fargo-adsg and Fargo3D.
@@ -22,10 +21,18 @@ Fargo3D: same as Fargo-adsg + gasvz\*.dat
 
 ## Installation
 
-:warning: Nonos requires Python 3.8 or newer. The easiest installation method is
+:warning: Nonos requires Python 3.10 or newer.
 
-```bash
+Get nonos and its minimal set of dependencies as
+
+```shell
 $ pip install nonos
+```
+
+or, to also get all optional dependencies
+
+```shell
+$ pip install "nonos[all]"
 ```
 
 ## Usage
