@@ -14,7 +14,7 @@ repos:
   - id: check-toml
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.6.12
+  rev: 0.7.6
   hooks:
   - id: uv-lock
 
@@ -36,7 +36,7 @@ repos:
     args: [--sections=forbid]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.4
+  rev: v0.11.10
   hooks:
   - id: ruff-format
   - id: ruff
