@@ -104,6 +104,7 @@ filterwarnings = [
     'ignore:datetime\.datetime\.utcfromtimestamp\(\) is deprecated:DeprecationWarning', # https://github.com/dateutil/dateutil/pull/1285
     'ignore:The py23 module has been deprecated and will be removed in a future release:DeprecationWarning',
     "ignore:Passing 'N' to ListedColormap is deprecated since:DeprecationWarning", # https://github.com/matplotlib/cmocean/pull/114
+    "ignore:'mode' parameter is deprecated:DeprecationWarning", # https://github.com/matplotlib/matplotlib/pull/30221
 ]
 
 [tool.mypy]
