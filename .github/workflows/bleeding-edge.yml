@@ -39,7 +39,21 @@ jobs:
         echo "UV_INDEX=https://pypi.anaconda.org/scientific-python-nightly-wheels/simple" >> $GITHUB_ENV
         echo "UV_INDEX_STRATEGY=unsafe-best-match" >> $GITHUB_ENV
 
-    - name: Run pytest
+    # using pip compile + pip lock to workaround limitations of universal locking
+    # in particular, this method is more reliable at ensuring we get nightly wheels
+    # instead of building stable versions from source
+    - name: Resolve and lock env
       run: |
-        uv run --no-editable --all-extras --group test \
-          pytest --color=yes
+        uv pip compile pyproject.toml \
+          --all-extras --group test \
+          --quiet \
+          -o pylock.toml
+
+    - name: Install env
+      run: |
+        uv venv
+        uv pip sync pylock.toml
+        uv pip install . --no-deps
+
+    - name: Run pytest
+      run: uv run --no-sync pytest --color=yes
