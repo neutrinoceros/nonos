@@ -26,6 +26,7 @@ jobs:
         - '3.11'
         - '3.12'
         - '3.13'
+        - '3.14'
         label: ['']
         include:
         - os: ubuntu-22.04
@@ -40,13 +41,13 @@ jobs:
           label: (oldest deps, full)
           install-args: --resolution=lowest-direct --exclude-newer 2025-02-19 --all-extras --compile-bytecode
         - os: ubuntu-latest
-          python-version: '3.13'
+          python-version: '3.14'
           install-args: --all-extras
           label: (full)
         - os: macos-latest
-          python-version: '3.13'
+          python-version: '3.14'
         - os: windows-latest
-          python-version: '3.13'
+          python-version: '3.14'
 
     name: ${{ matrix.os }}-py${{ matrix.python-version }} ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
