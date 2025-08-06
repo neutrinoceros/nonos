@@ -420,13 +420,13 @@ class CodeReadFormat:
 
         s = fid.readline()  # DIMENSIONS NX NY NZ
         slist = s.split()
-        entry = str(slist[0], "utf-8")
+        entry = slist[0].decode("utf-8")
         if entry == "FIELD":
             nfield = int(slist[2])
             for _field in range(nfield):
                 s = fid.readline()
                 slist = s.split()
-                entry = str(slist[0], "utf-8")
+                entry = slist[0].decode("utf-8")
                 if entry == "TIME":
                     V.t = np.fromfile(fid, dt, 1)
                 elif entry == "GEOMETRY":
@@ -533,7 +533,7 @@ class CodeReadFormat:
             s = fid.readline()  # POINT_DATA NXNYNZ
 
             slist = s.split()
-            point_type = str(slist[0], "utf-8")
+            point_type = slist[0].decode("utf-8")
             npoints = int(slist[1])
             s = fid.readline()  # EXTRA LINE FEED
 
@@ -630,7 +630,7 @@ class CodeReadFormat:
 
                 s = fid.readline()  # CELL_DATA (NX-1)(NY-1)(NZ-1)
                 slist = s.split()
-                data_type = str(slist[0], "utf-8")
+                data_type = slist[0].decode("utf-8")
                 if data_type != "CELL_DATA":
                     fid.close()
                     raise ValueError(
@@ -709,7 +709,7 @@ class CodeReadFormat:
 
                 s = fid.readline()  # CELL_DATA (NX-1)(NY-1)(NZ-1)
                 slist = s.split()
-                data_type = str(slist[0], "utf-8")
+                data_type = slist[0].decode("utf-8")
                 if data_type != "CELL_DATA":
                     fid.close()
                     raise ValueError(
@@ -762,8 +762,8 @@ class CodeReadFormat:
                 if len(s) < 2:  # leave if end of file
                     break
                 slist = s.split()
-                datatype = str(slist[0], "utf-8")
-                varname = str(slist[1], "utf-8").upper()
+                datatype = slist[0].decode("utf-8")
+                varname = slist[1].decode("utf-8").upper()
                 if datatype == "SCALARS":
                     fid.readline()  # LOOKUP TABLE
 

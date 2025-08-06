@@ -92,13 +92,13 @@ class VTKReader:
 
         s = fid.readline()  # DIMENSIONS NX NY NZ
         slist = s.split()
-        entry = str(slist[0], "utf-8")
+        entry = slist[0].decode("utf-8")
         if entry == "FIELD":
             nfield = int(slist[2])
             for _field in range(nfield):
                 s = fid.readline()
                 slist = s.split()
-                entry = str(slist[0], "utf-8")
+                entry = slist[0].decode("utf-8")
                 if entry == "TIME":
                     # skip
                     fid.seek(dt.itemsize, os.SEEK_CUR)
@@ -199,7 +199,7 @@ class VTKReader:
             s = fid.readline()  # POINT_DATA NXNYNZ
 
             slist = s.split()
-            point_type = str(slist[0], "utf-8")
+            point_type = slist[0].decode("utf-8")
             npoints = int(slist[1])
             s = fid.readline()  # EXTRA LINE FEED
 
@@ -292,7 +292,7 @@ class VTKReader:
 
                 s = fid.readline()  # CELL_DATA (NX-1)(NY-1)(NZ-1)
                 slist = s.split()
-                data_type = str(slist[0], "utf-8")
+                data_type = slist[0].decode("utf-8")
                 if data_type != "CELL_DATA":  # pragma: no cover
                     fid.close()
                     raise ValueError(
@@ -370,7 +370,7 @@ class VTKReader:
 
                 s = fid.readline()  # CELL_DATA (NX-1)(NY-1)(NZ-1)
                 slist = s.split()
-                data_type = str(slist[0], "utf-8")
+                data_type = slist[0].decode("utf-8")
                 if data_type != "CELL_DATA":  # pragma: no cover
                     fid.close()
                     raise ValueError(
@@ -427,8 +427,8 @@ class VTKReader:
                 if len(s) < 2:  # leave if end of file
                     break
                 slist = s.split()
-                datatype = str(slist[0], "utf-8")
-                varname = str(slist[1], "utf-8").upper()
+                datatype = slist[0].decode("utf-8")
+                varname = slist[1].decode("utf-8").upper()
                 if datatype == "SCALARS":
                     fid.readline()  # LOOKUP TABLE
 
