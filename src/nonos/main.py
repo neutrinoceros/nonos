@@ -249,10 +249,8 @@ def get_parser() -> argparse.ArgumentParser:
         description=__doc__,
     )
 
-    # TODO: pass these as kwargs when support for Python 3.13 is dropped
-    # https://docs.python.org/3.14/library/argparse.html#color
+    # TODO: pass this as kwarg when support for Python 3.13 is dropped
     # https://docs.python.org/3.14/library/argparse.html#suggest-on-error
-    parser.color = True  # type: ignore [attr-defined]
     parser.suggest_on_error = True  # type: ignore [attr-defined]
 
     parser.add_argument(
