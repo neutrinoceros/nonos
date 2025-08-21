@@ -1,5 +1,4 @@
 import os
-from importlib.util import find_spec
 
 import numpy.testing as npt
 import pytest
@@ -7,85 +6,6 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
 from nonos.api import GasDataSet, compute, find_nearest, from_data
-from nonos.main import main
-
-ARGS_TO_CHECK = {
-    "vanilla_conf": ["-geometry", "polar"],
-    "diff": ["-geometry", "polar", "-diff"],
-    "log": ["-geometry", "polar", "-log"],
-    "movie_xy": ["-geometry", "polar", "-all", "-plane", "x", "y"],
-    "movie_with_diff": ["-geometry", "polar", "-all", "-diff"],
-    "movie_with_multiproc": ["-geometry", "polar", "-all", "-ncpu", "2"],
-}
-
-
-# CLI testing
-
-
-@pytest.mark.parametrize("argv", ARGS_TO_CHECK.values(), ids=ARGS_TO_CHECK.keys())
-def test_plot_simple(argv, simulation_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    ret = main(argv + ["-dir", str(simulation_dir), "-geometry", "polar"])
-
-    out, err = capsys.readouterr()
-    assert err == ""
-    assert out == ""
-    assert ret == 0
-    assert len(list(tmp_path.glob("*.png"))) > 0
-
-
-@pytest.mark.parametrize("format", ["pdf", "png", "jpg"])
-def test_common_image_formats(format, simulation_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    ret = main(["-dir", str(simulation_dir), "-fmt", format, "-geometry", "polar"])
-
-    out, err = capsys.readouterr()
-    assert err == ""
-    assert out == ""
-    assert ret == 0
-    assert len(list(tmp_path.glob(f"*.{format}"))) > 0
-
-
-def test_plot_simple_corotation(planet_simulation_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    # just check that the call returns no err
-    ret = main(["-cor", "0", "-dir", str(planet_simulation_dir), "-geometry", "polar"])
-
-    out, err = capsys.readouterr()
-    assert out == ""
-    assert err == ""
-    assert ret == 0
-
-
-def test_unknown_geometry(test_data_dir, tmp_path):
-    os.chdir(tmp_path)
-    with pytest.raises(
-        RuntimeError, match=r"Geometry couldn't be determined from data"
-    ):
-        main(["-dir", str(test_data_dir / "idefix_rwi")])
-
-
-def test_newvtk_geometry(test_data_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    ret = main(["-cor", "0", "-dir", str(test_data_dir / "idefix_newvtk_planet2d")])
-    out, err = capsys.readouterr()
-    assert out == ""
-    assert err == ""
-    assert ret == 0
-
-
-def test_verbose_info(simulation_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    ret = main(["-v", "-dir", str(simulation_dir), "-geometry", "polar"])
-
-    out, err = capsys.readouterr()
-    assert err == ""
-    assert "Operation took" in out
-    assert "INFO" in out
-    assert ret == 0
-
-
-# API testing
 
 
 def test_plot_planet_corotation(test_data_dir):
@@ -170,16 +90,6 @@ def test_compute_from_data(test_data_dir):
     npt.assert_array_equal(rhovx2_from_data.data, rhovx2_compute.data)
 
 
-def test_pbar(simulation_dir, capsys, tmp_path):
-    os.chdir(tmp_path)
-    ret = main(["-pbar", "-dir", str(simulation_dir), "-geometry", "polar"])
-
-    out, err = capsys.readouterr()
-    assert err == ""
-    assert "Processing snapshots" in out
-    assert ret == 0
-
-
 def test_corotation_api_float(test_data_dir):
     os.chdir(test_data_dir / "idefix_newvtk_planet2d")
 
@@ -200,80 +110,3 @@ def test_reg(test_data_dir, map_args):
     fig = Figure()
     ax = fig.add_subplot()
     ds["RHO"].map(*map_args).plot(fig, ax)
-
-
-@pytest.mark.parametrize(
-    "cmap",
-    [
-        pytest.param(
-            cmap_name,
-            marks=pytest.mark.skipif(
-                not find_spec(pkg_name), reason=f"{pkg_name} is not installed"
-            ),
-        )
-        for pkg_name, cmap_name in [
-            ("cblind", "cb.rainbow"),
-            ("cmocean", "cmo.thermal"),
-            ("cmasher", "cmr.dusk"),
-            ("cmyt", "cmyt.arbre"),
-        ]
-    ],
-)
-def test_colormap_extensions_integration(cmap, capsys, test_data_dir, tmp_path):
-    simdir = str(test_data_dir / "idefix_planet3d")
-    os.chdir(tmp_path)
-    ret = main(["-dir", simdir, "-geometry", "polar", "-cmap", cmap])
-    assert ret == 0
-    out, err = capsys.readouterr()
-    assert out == ""
-    assert err == ""
-
-
-@pytest.mark.parametrize(
-    "cmap, pkg",
-    [
-        pytest.param(
-            cmap_name,
-            pkg_name,
-            marks=pytest.mark.skipif(
-                find_spec(pkg_name), reason=f"{pkg_name} is installed"
-            ),
-        )
-        for pkg_name, cmap_name in [
-            ("cblind", "cb.rainbow"),
-            ("cmocean", "cmo.thermal"),
-            ("cmasher", "cmr.dusk"),
-            ("cmyt", "cmyt.arbre"),
-        ]
-    ],
-)
-def test_colormap_extensions_missing_package(
-    cmap, pkg, capsys, test_data_dir, tmp_path
-):
-    simdir = str(test_data_dir / "idefix_planet3d")
-    os.chdir(tmp_path)
-    ret = main(["-dir", simdir, "-geometry", "polar", "-cmap", cmap])
-    assert ret == 0
-    out, err = capsys.readouterr()
-    assert out == ""
-    assert err.replace("\n", "") == (
-        f"🦴 Warning requested colormap {cmap!r}, but {pkg} is not installed. "
-        "The default colormap will be used instead."
-    )
-
-
-def test_unknown_colormap_package_prefix(capsys, test_data_dir, tmp_path):
-    simdir = str(test_data_dir / "idefix_planet3d")
-    os.chdir(tmp_path)
-    ret = main(
-        ["-dir", simdir, "-geometry", "polar", "-cmap", "cmunknown.thismapdoesnexist"]
-    )
-    assert ret == 0
-
-    out, err = capsys.readouterr()
-    assert out == ""
-    assert err.replace("\n", "") == (
-        "🦴 Warning requested colormap 'cmunknown.thismapdoesnexist' "
-        "with the unknown prefix 'cmunknown'. "
-        "The default colormap will be used instead."
-    )

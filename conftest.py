@@ -11,7 +11,7 @@ def pytest_configure(config):  # noqa: ARG001
 
 @pytest.fixture()
 def test_data_dir():
-    return Path(__file__).parent / "data"
+    return Path(__file__).parent / "tests" / "data"
 
 
 @pytest.fixture(params=["idefix_planet3d", "fargo3d_planet2d"])
