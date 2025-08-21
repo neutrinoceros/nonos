@@ -55,14 +55,13 @@ content-type = "text/markdown"
 nonos = "nonos.main:main"
 
 [project.urls]
-Homepage = "https://github.com/volodia99/nonos"
+Homepage = "https://github.com/la-niche/nonos"
 
 [dependency-groups]
 test = [
     "cogapp>=3.3.0",
     "pytest-mpl>=0.15.1",
     "pytest>=8.0.0",
-
 ]
 covcheck = [
     {include-group = "test"},
