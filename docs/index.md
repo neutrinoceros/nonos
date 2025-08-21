@@ -19,9 +19,5 @@ We list here the accepted formats for the data:
 The easiest installation method is
 
 ```bash
-$ pip install nonos
+$ python -m pip install nonos
 ```
-
-!!! warning "Requirement"
-
-    nonos requires Python 3.8 or newer.

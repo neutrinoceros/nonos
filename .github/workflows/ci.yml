@@ -61,11 +61,12 @@ jobs:
         prune-cache: false
         cache-suffix: ${{ matrix.label }}
 
+    - name: Build
+      run: uv sync --all-packages --group covcheck ${{ matrix.install-args }}
+
     - name: Run pytest
       shell: bash
-      run: |
-        uv run --group covcheck ${{ matrix.install-args }} \
-          coverage run --parallel-mode -m pytest --color=yes
+      run: uv run --no-sync coverage run --parallel-mode -m pytest --color=yes
 
     - name: Upload coverage data
       # only using reports from ubuntu because
@@ -119,7 +120,7 @@ jobs:
     - name: Run Image Tests
       run: |
         uv run --frozen --no-editable --group test \
-          pytest --color=yes --mpl -m mpl_image_compare \
+          pytest tests --color=yes --mpl -m mpl_image_compare \
             --mpl-generate-summary=html \
             --mpl-results-path=nonos_pytest_mpl_results \
             --mpl-baseline-path=tests/pytest_mpl_baseline
@@ -128,7 +129,7 @@ jobs:
       if: failure()
       run: |
         uv run --frozen --no-editable --group test \
-          pytest --color=yes --mpl -m mpl_image_compare \
+          pytest tests --color=yes --mpl -m mpl_image_compare \
             --mpl-generate-path=nonos_pytest_mpl_new_baseline \
             --last-failed
 
@@ -208,3 +209,18 @@ jobs:
       with:
         name: site
         path: site
+
+  pre-publish-checks:
+    runs-on: ubuntu-latest
+    name: pre-publication checks
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@4959332f0f014c5280e7eac8b70c90cb574c9f9b # v6.6.0
+      with:
+        enable-cache: true
+        prune-cache: false
+        cache-suffix: pre-publish-checks
+
+    - run: uv run scripts/pre_publish_checks.py

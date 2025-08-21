@@ -12,7 +12,7 @@ from cogapp import Cog
 )
 @pytest.mark.skipif(
     sys.version_info < (3, 13),
-    reason="argparse --help messages were slightly modified in Python 3.10, and 3.13",
+    reason="argparse --help messages were slightly modified in Python 3.13",
 )
 def test_if_cog_needs_to_be_run():
     _stdout = sys.stdout
@@ -24,5 +24,5 @@ def test_if_cog_needs_to_be_run():
     output = sys.stdout.getvalue()
     sys.stdout = _stdout
     assert output == readme.read_text(), (
-        "Run 'cog -r README.md' from the top level of the repo (with Python >= 3.10)"
+        "Run 'cog -r README.md' from the top level of the repo"
     )

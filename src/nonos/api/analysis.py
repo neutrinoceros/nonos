@@ -29,7 +29,6 @@ from nonos.api._angle_parsing import (
 )
 from nonos.api.tools import find_around, find_nearest
 from nonos.loaders import Recipe, loader_from, recipe_from
-from nonos.logging import logger
 
 if sys.version_info >= (3, 11):
     from typing import assert_never
@@ -158,7 +157,6 @@ class Plotable:
             vmin = kwargs.pop("vmin") if "vmin" in kwargs else np.nanmin(data)
             vmax = kwargs.pop("vmax") if "vmax" in kwargs else np.nanmax(data)
             if "norm" in kwargs:
-                logger.info("norm has no meaning in 1D.")
                 kwargs.pop("norm")
             artist = ax.plot(aval, data, **kwargs)[0]
             ax.set(ylim=(vmin, vmax), xlabel=akey)
@@ -387,9 +385,7 @@ class GasField:
         subdir = directory / self.field.lower()
         file = subdir / f"{operation}_{self.field}.{self.on:04d}.npy"
         if not header_only:
-            if file.is_file():
-                logger.info("{} already exists", file)
-            else:
+            if not file.is_file():
                 subdir.mkdir(exist_ok=True, parents=True)
                 with open(file, "wb") as fh:
                     np.save(fh, self.data)
@@ -400,9 +396,7 @@ class GasField:
         header_file = headerdir / filename
         if (len(group_of_files) > 0 and not header_file.is_file()) or header_only:
             headerdir.mkdir(exist_ok=True, parents=True)
-            if header_file.is_file():
-                logger.info("{} already exists", header_file)
-            else:
+            if not header_file.is_file():
                 dictsaved = self.coords.to_dict()
 
                 def is_array(item: tuple[str, Any]) -> bool:
@@ -773,7 +767,6 @@ class GasField:
         )
 
     def vertical_at_z(self, z=0.0, *, operation_name=None) -> "GasField":
-        logger.info("vertical_at_z TO BE TESTED")
         operation = self._parse_operation_name(
             prefix=self.operation,
             default_suffix=f"vertical_at_z{z}",

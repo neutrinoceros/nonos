@@ -1,5 +1,13 @@
 # Usage in command line (CLI)
 
+!!! warning "installation"
+
+    Since `nonos` v0.19.0, `nonos-cli` is a separate package, which is not installed
+    alongside the library by default. You can request it separately with `pip install nonos-cli`,
+    although note that the recommended approach is to use a tool installer such
+    as `uv` (`uv tool install nonos-cli`) or `pipx` (`pipx install nonos-cli`).
+
+
 The nonos CLI gets its parameters from three sources:
 
 * command line parameters
@@ -215,10 +223,10 @@ This method can also be used to store a complete configuration file from command
 ```shell
 $ nonos -ncpu 8 -cmap viridis -operation vm -diff -vmin=-10 -vmax=+100 -config
 ```
-As of nonos 0.7.0, this will print
+As of nonos 0.19.0 + nonos-cli 0.1.0, this will print
 
 ```
-# Generated with nonos 0.7.0
+# Generated with nonos 0.19.0 + nonos-cli 0.1.0
 datadir            .
 field              RHO
 operation          vm

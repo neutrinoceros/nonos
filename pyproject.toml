@@ -4,8 +4,8 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "nonos"
-version = "0.18.0"
-description = "A tool to analyze results from idefix/pluto simulations (for protoplanetary disks more specifically)"
+version = "0.19.0"
+description = "A lightweight plotting library for protoplanetary disks simulations"
 authors = [
     { name = "G. Wafflard-Fernandez" },
     { name = "C.M.T. Robert" },
@@ -30,16 +30,17 @@ requires-python = ">=3.10"
 
 dependencies = [
     "inifix>=5.1.0",
-    "loguru>=0.5.3",
     "matplotlib>=3.5.0",
     "numpy>=1.21.2",
-    "termcolor>=2.1.0",
-    "tqdm>=4.64.1",
     "typing_extensions >= 4.4.0 ; python_version < '3.12'",
 ]
 
 [project.optional-dependencies]
+cli = [
+    "nonos-cli>=0.1.0",
+]
 all = [
+    "nonos[cli]",
     "cblind>=2.3.0",
     "cmocean>=3.0.3",
     "cmyt>=2.0.0",
@@ -50,9 +51,6 @@ all = [
 [project.readme]
 file = "README.md"
 content-type = "text/markdown"
-
-[project.scripts]
-nonos = "nonos.main:main"
 
 [project.urls]
 Homepage = "https://github.com/la-niche/nonos"
@@ -74,6 +72,7 @@ typecheck = [
     "mypy>=1.13.0",
 ]
 docs = [
+    "nonos[cli]",
     "mkdocs>=1.6.1",
     "mkdocs-include-markdown-plugin>=7.1.2",
     "mkdocs-material>=9.5.47",
@@ -101,7 +100,7 @@ select = [
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
-known-first-party = ["nonos"]
+known-first-party = ["nonos", "nonos_cli"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -126,11 +125,13 @@ ignore_missing_imports = true
 [tool.coverage.run]
 source = [
     "src",
-    "tests"
+    "tests",
+    "cli/src",
+    "cli/tests",
 ]
 omit = [
-    "src/nonos/__main__.py",
     "src/nonos/_backports.py",
+    "cli/src/nonos_cli/__main__.py",
 ]
 
 [tool.coverage.report]
@@ -150,3 +151,11 @@ exclude_also = [
     "^\\s*case _ as unreachable:",
     "^\\s*assert_never\\b",
 ]
+
+[tool.uv.workspace]
+members = [
+    "cli",
+]
+
+[tool.uv.sources]
+nonos-cli = { workspace = true }
