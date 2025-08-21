@@ -6,7 +6,6 @@ from collections import deque
 from collections.abc import ItemsView, KeysView, ValuesView
 from copy import deepcopy
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING, Any
@@ -1268,17 +1267,6 @@ class GasDataSet:
             "code": code.removesuffix("_vtk") if code is not None else None,
             "directory": directory,
         }
-
-    @cached_property
-    def params(self):
-        from nonos.api.from_simulation import Parameters
-
-        warnings.warn(
-            "GasDataSet.params is deprecated and will be removed in a future version.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return Parameters(**self._parameters_input)
 
     @classmethod
     def from_npy(

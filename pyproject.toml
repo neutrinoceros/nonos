@@ -81,9 +81,6 @@ docs = [
 ]
 
 [tool.ruff.lint]
-exclude = [
-    "from_simulation.py", # deprecated module
-]
 ignore = [
     "E501",
     "PTH123", # `open()` should be replaced by `Path.open()`
@@ -134,7 +131,6 @@ source = [
 omit = [
     "src/nonos/__main__.py",
     "src/nonos/_backports.py",
-    "src/nonos/api/from_simulation.py", # deprecated module
 ]
 
 [tool.coverage.report]
