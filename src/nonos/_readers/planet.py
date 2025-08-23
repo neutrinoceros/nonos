@@ -1,8 +1,8 @@
 __all__ = [
-    "NullReader",
-    "IdefixReader",
     "Fargo3DReader",
     "FargoADSGReader",
+    "IdefixReader",
+    "NullReader",
 ]
 import re
 from pathlib import Path

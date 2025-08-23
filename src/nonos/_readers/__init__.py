@@ -1,3 +1,2 @@
-from . import binary
-from . import planet
-from . import ini
+__all__ = ["binary", "ini", "planet"]
+from . import binary, ini, planet

@@ -1,7 +1,7 @@
 __all__ = [
-    "VTKReader",
     "Fargo3DReader",
     "FargoADSGReader",
+    "VTKReader",
 ]
 import json
 import os

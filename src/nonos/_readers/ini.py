@@ -1,8 +1,8 @@
 __all__ = [
-    "IdefixVTKReader",
-    "PlutoVTKReader",
     "Fargo3DReader",
     "FargoADSGReader",
+    "IdefixVTKReader",
+    "PlutoVTKReader",
 ]
 from pathlib import Path
 from typing import final
