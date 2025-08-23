@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 __all__ = [
-    "Geometry",
     "Axis",
-    "axes_from_geometry",
     "Coordinates",
+    "Geometry",
+    "axes_from_geometry",
 ]
 import sys
 import warnings

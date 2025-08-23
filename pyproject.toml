@@ -82,7 +82,6 @@ docs = [
 
 [tool.ruff.lint]
 exclude = [
-    "*__init__.py",
     "from_simulation.py", # deprecated module
 ]
 ignore = [
@@ -100,6 +99,7 @@ select = [
     "YTT", # flake8-2020
     "I",   # isort
     "UP",  # pyupgrade
+    "RUF022", # unsorted-dunder-all
 ]
 
 [tool.ruff.lint.isort]
