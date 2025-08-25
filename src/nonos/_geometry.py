@@ -76,7 +76,7 @@ def axes_from_geometry(geometry: Geometry, /) -> tuple[Axis, Axis, Axis]:
 def _get_target_geometry(*axes: Axis) -> Geometry:
     axes_set = set(axes)
     if len(axes_set) == 0 or len(axes_set) > 3:
-        raise ValueError
+        raise RuntimeError
 
     candidates: set[Geometry] = set()
     for geom in Geometry:
@@ -84,7 +84,7 @@ def _get_target_geometry(*axes: Axis) -> Geometry:
             candidates.add(geom)
 
     if len(candidates) == 0:
-        raise ValueError
+        raise RuntimeError
     elif len(candidates) > 1:
         # supposedly unreachable
         raise RuntimeError

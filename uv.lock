@@ -1122,8 +1122,8 @@ provides-extras = ["all"]
 [package.metadata.requires-dev]
 covcheck = [
     { name = "cogapp", specifier = ">=3.3.0" },
-    { name = "coverage", marker = "python_full_version >= '3.11'", specifier = ">=7.4.4" },
-    { name = "coverage", extras = ["toml"], marker = "python_full_version < '3.11'", specifier = ">=7.4.4" },
+    { name = "coverage", specifier = ">=7.6.12" },
+    { name = "coverage", extras = ["toml"], marker = "python_full_version < '3.11'" },
     { name = "numexpr", specifier = ">=2.10.2" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-mpl", specifier = ">=0.15.1" },

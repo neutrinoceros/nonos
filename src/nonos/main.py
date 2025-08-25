@@ -44,7 +44,7 @@ from nonos.parsing import (
 )
 from nonos.styling import set_mpl_style
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from typing import Literal
 
     from matplotlib.backend_bases import FigureCanvasBase

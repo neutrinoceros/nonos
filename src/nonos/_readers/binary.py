@@ -804,7 +804,7 @@ class NPYReader:
         haystack = NPYReader.get_bin_files(ref_file.parent)
         for file in haystack:
             match = NPYReader._filename_re.fullmatch(file.name)
-            if match is None:  # pragma: no cover
+            if match is None:
                 raise RuntimeError
             if match.group("prefix") != prefix:
                 continue
