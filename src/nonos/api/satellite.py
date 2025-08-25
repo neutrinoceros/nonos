@@ -61,28 +61,6 @@ def file_analysis(
     return columns
 
 
-def planet_analysis(
-    planet_number, *, inifile="", code="", directory="", norb=None
-):  # pragma: no cover
-    from nonos.api.from_simulation import Parameters
-
-    warnings.warn(
-        "nonos.api.satellite.planet_analysis is deprecated and will be removed in "
-        "a future version. Please use nonos.api.satellite.file_analysis instead.",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
-    if norb is not None:
-        warnings.warn(
-            "The norb argument has no effect and is deprecated",
-            stacklevel=2,
-        )
-    init = Parameters(inifile=inifile, code=code, directory=directory)
-    init.loadIniFile()
-    init.loadPlanetFile(planet_number=planet_number)
-    return init
-
-
 class NonosLick:
     def __init__(
         self,
