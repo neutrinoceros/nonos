@@ -10,6 +10,7 @@ repos:
   - id: debug-statements
   - id: check-merge-conflict
   - id: trailing-whitespace
+    exclude: (\.dat|\.vtk)$
   - id: end-of-file-fixer
   - id: check-toml
 
