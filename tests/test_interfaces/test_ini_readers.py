@@ -31,7 +31,7 @@ class TestFargoReaders:
             return compile_to_FargoADSG(text)
         elif reader is Fargo3DReader:
             return compile_to_Fargo3D(text)
-        else:  # pragma: no cover
+        else:
             raise RuntimeError
 
     @pytest.mark.parametrize(

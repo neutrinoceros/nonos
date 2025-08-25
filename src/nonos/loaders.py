@@ -22,7 +22,7 @@ else:
     from nonos._backports import StrEnum
 
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from nonos._types import BinData, IniData, PathT, PlanetData
 
 
