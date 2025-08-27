@@ -8,6 +8,6 @@ authors:
   given-names: "Clément"
   orcid: "https://orcid.org/0000-0001-8629-7068"
 title: "nonos"
-version: 0.18.0
-date-released: 2025-05-21
+version: 0.19.0 # when bumping this, remember to also update date-released
+date-released: 2025-08-27
 url: "https://github.com/la-niche/nonos"
