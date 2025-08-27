@@ -123,10 +123,7 @@ def main() -> int:
         cp_stdout,
     )
 
-    # TODO: uncomment check_citation when ready to release nonos 0.19.0
-    # and update release date too
-    # see https://github.com/la-niche/nonos/issues/467
-    return check_lib_version(md)  # + check_citation(md)
+    return check_lib_version(md) + check_citation(md)
 
 
 if __name__ == "__main__":
