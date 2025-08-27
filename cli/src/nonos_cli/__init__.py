@@ -171,14 +171,18 @@ def process_field(
     if cm_prefix := cmap.rpartition(".")[0]:
         if (cm_package := KNOWN_CMAP_PACKAGE_PREFIXES.get(cm_prefix)) is None:
             logger.warning(
-                f"requested colormap {cmap!r} with the unknown prefix {cm_prefix!r}. "
-                "The default colormap will be used instead."
+                "requested colormap {cmap!r} with the unknown prefix {cm_prefix!r}. "
+                "The default colormap will be used instead.",
+                cmap=cmap,
+                cm_prefix=cm_prefix,
             )
             plot_kwargs.pop("cmap")
         elif not find_spec(cm_package):
             logger.warning(
-                f"requested colormap {cmap!r}, but {cm_package} is not installed. "
-                "The default colormap will be used instead."
+                "requested colormap {cmap!r}, but {cm_package} is not installed. "
+                "The default colormap will be used instead.",
+                cmap=cmap,
+                cm_package=cm_package,
             )
             plot_kwargs.pop("cmap")
         else:
@@ -466,15 +470,14 @@ def main(argv: list[str] | None = None) -> int:
     # clargs.pop("verbose")
     level = parse_verbose_level(clargs.pop("verbose"))
     configure_logger(level=level)
-    # logger.setLevel(level)
 
     if clargs.pop("isolated"):
         config_file_args: dict[str, Any] = {}
     elif (ifile := clargs.pop("input")) is not None:
         if not Path(ifile).is_file():
-            logger.error(f"Couldn't find requested input file {ifile!r}.")
+            logger.error("Couldn't find requested input file {!r}.", ifile)
             return 1
-        logger.warning(f"Using parameters from {ifile!r}.")
+        logger.warning("Using parameters from {!r}.", ifile)
         config_file_args = inifix.load(ifile)
     elif Path("nonos.ini").is_file():
         logger.warning("Using parameters from 'nonos.ini'.")
@@ -503,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         loader = loader_from(directory=args["datadir"])
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
-        logger.error(exc)
+        logger.error("{}", exc)
         return 1
 
     data_files = loader.binary_reader.get_bin_files(args["datadir"])
@@ -521,12 +524,14 @@ def main(argv: list[str] | None = None) -> int:
                 parse_output_number_range(args["on"], maxval=max(available))
             )
         except ValueError as exc:
-            logger.error(exc)
+            logger.error("{}", exc)
             return 1
 
     if not (toplot := list(requested.intersection(available))):
         logger.error(
-            f"No requested output file was found (requested {requested}, found {available})."
+            "No requested output file was found (requested {}, found {}).",
+            requested,
+            available,
         )
         return 1
     args["on"] = toplot
@@ -541,7 +546,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             args["format"] = parse_image_format(args["format"])
         except ValueError as exc:
-            logger.error(exc)
+            logger.error("{}", exc)
             return 1
 
     # check that every CLI-only argument was consumed at this point
@@ -552,7 +557,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args["ncpu"] > (ncpu := min(args["ncpu"], os.cpu_count())):
         logger.warning(
-            f"Requested {args['ncpu']}, but the runner only has access to {ncpu}."
+            "Requested {args_ncpu}, but the runner only has access to {ncpu}.",
+            args_ncpu=args["ncpu"],
+            ncpu=ncpu,
         )
 
     planet_file: str | None
