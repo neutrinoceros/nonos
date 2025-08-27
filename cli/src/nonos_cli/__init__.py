@@ -474,10 +474,10 @@ def main(argv: list[str] | None = None) -> int:
         if not Path(ifile).is_file():
             logger.error(f"Couldn't find requested input file {ifile!r}.")
             return 1
-        logger.warning(f"[bold white]Using parameters from {ifile!r}.")
+        logger.warning(f"Using parameters from {ifile!r}.")
         config_file_args = inifix.load(ifile)
     elif Path("nonos.ini").is_file():
-        logger.warning("[bold white]Using parameters from 'nonos.ini'.")
+        logger.warning("Using parameters from 'nonos.ini'.")
         config_file_args = inifix.load("nonos.ini")
     else:
         config_file_args = {}
