@@ -15,11 +15,16 @@ Pluto and Idefix: data.\*\*\*\*.vtk
 Fargo-adsg: gasdens.dat, gasvy\*.dat, gasvx\*.dat
 Fargo3D: same as Fargo-adsg + gasvz\*.dat
 
-:construction: This project and documentation are under construction :construction:
-## Ongoing progress
+## Development status
 
-* spherical coordinates
-* nonos' api
+`nonos` is considered public beta software: we are actively improving the
+design and API, but we are not at the point where we want to bless the
+current state as stable yet. We *are* trying to keep breaking changes to a
+minimum, and run deprecation cycles to minimize the pain, however they might
+happen in any minor release, so if you rely on `nonos` for your own work
+(thank you !), we strongly encourage you to follow along releases and
+upgrade frequently, so we have more opportunities to discuss if something
+breaks.
 
 ## Installation
 
