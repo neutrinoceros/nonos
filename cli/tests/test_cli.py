@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 from importlib.metadata import version
 from importlib.util import find_spec
@@ -8,6 +9,8 @@ import pytest
 
 from nonos_cli import main
 from nonos_cli.config import DEFAULTS
+
+TIMESTAMP_PREFIX = r"\[\d\d:\d\d:\d\d\]\s+"
 
 
 @pytest.fixture()
@@ -158,9 +161,9 @@ def test_verbose_info(simulation_dir, capsys, tmp_path):
     ret = main(["-v", "-dir", str(simulation_dir), "-geometry", "polar"])
 
     out, err = capsys.readouterr()
-    assert err == ""
-    assert "Operation took" in out
-    assert "INFO" in out
+    assert out == ""
+    assert "Operation took" in err
+    assert "INFO" in err
     assert ret == 0
 
 
@@ -250,9 +253,10 @@ def test_colormap_extensions_missing_package(
     assert ret == 0
     out, err = capsys.readouterr()
     assert out == ""
-    assert err.replace("\n", "") == (
-        f"🦴 Warning requested colormap {cmap!r}, but {pkg} is not installed. "
-        "The default colormap will be used instead."
+    assert re.fullmatch(
+        rf"{TIMESTAMP_PREFIX}🍗 WARNING\s* requested colormap {cmap!r}, "
+        rf"but {pkg} is not installed\. The default colormap will be used instead\.\n",
+        err,
     )
 
 
@@ -266,8 +270,8 @@ def test_unknown_colormap_package_prefix(capsys, test_data_dir, tmp_path):
 
     out, err = capsys.readouterr()
     assert out == ""
-    assert err.replace("\n", "") == (
-        "🦴 Warning requested colormap 'cmunknown.thismapdoesnexist' "
-        "with the unknown prefix 'cmunknown'. "
-        "The default colormap will be used instead."
+    assert re.fullmatch(
+        rf"{TIMESTAMP_PREFIX}🍗 WARNING\s* requested colormap 'cmunknown.thismapdoesnexist' "
+        r"with the unknown prefix 'cmunknown'\. The default colormap will be used instead\.\n",
+        err,
     )

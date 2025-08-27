@@ -28,13 +28,7 @@ from nonos.api._angle_parsing import _parse_planet_file
 from nonos.loaders import loader_from
 from nonos.styling import set_mpl_style
 from nonos_cli.config import DEFAULTS
-from nonos_cli.logging import (
-    configure_logger,
-    logger,
-    parse_verbose_level,
-    print_err,
-    print_warn,
-)
+from nonos_cli.logging import configure_logger, logger, parse_verbose_level
 from nonos_cli.parsing import (
     is_set,
     parse_image_format,
@@ -176,13 +170,13 @@ def process_field(
 
     if cm_prefix := cmap.rpartition(".")[0]:
         if (cm_package := KNOWN_CMAP_PACKAGE_PREFIXES.get(cm_prefix)) is None:
-            print_warn(
+            logger.warning(
                 f"requested colormap {cmap!r} with the unknown prefix {cm_prefix!r}. "
                 "The default colormap will be used instead."
             )
             plot_kwargs.pop("cmap")
         elif not find_spec(cm_package):
-            print_warn(
+            logger.warning(
                 f"requested colormap {cmap!r}, but {cm_package} is not installed. "
                 "The default colormap will be used instead."
             )
@@ -478,12 +472,12 @@ def main(argv: list[str] | None = None) -> int:
         config_file_args: dict[str, Any] = {}
     elif (ifile := clargs.pop("input")) is not None:
         if not Path(ifile).is_file():
-            print_err(f"Couldn't find requested input file {ifile!r}.")
+            logger.error(f"Couldn't find requested input file {ifile!r}.")
             return 1
-        print_warn(f"[bold white]Using parameters from {ifile!r}.")
+        logger.warning(f"[bold white]Using parameters from {ifile!r}.")
         config_file_args = inifix.load(ifile)
     elif Path("nonos.ini").is_file():
-        print_warn("[bold white]Using parameters from 'nonos.ini'.")
+        logger.warning("[bold white]Using parameters from 'nonos.ini'.")
         config_file_args = inifix.load("nonos.ini")
     else:
         config_file_args = {}
@@ -509,7 +503,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         loader = loader_from(directory=args["datadir"])
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
-        print_err(exc)
+        logger.error(exc)
         return 1
 
     data_files = loader.binary_reader.get_bin_files(args["datadir"])
@@ -527,25 +521,27 @@ def main(argv: list[str] | None = None) -> int:
                 parse_output_number_range(args["on"], maxval=max(available))
             )
         except ValueError as exc:
-            print_err(exc)
+            logger.error(exc)
             return 1
 
     if not (toplot := list(requested.intersection(available))):
-        print_err(
+        logger.error(
             f"No requested output file was found (requested {requested}, found {available})."
         )
         return 1
     args["on"] = toplot
 
     if (show := clargs.pop("display")) and len(args["on"]) > 1:
-        print_warn("display mode can not be used with multiple images, turning it off.")
+        logger.warning(
+            "display mode can not be used with multiple images, turning it off."
+        )
         show = False
 
     if not show:
         try:
             args["format"] = parse_image_format(args["format"])
         except ValueError as exc:
-            print_err(exc)
+            logger.error(exc)
             return 1
 
     # check that every CLI-only argument was consumed at this point
@@ -555,7 +551,7 @@ def main(argv: list[str] | None = None) -> int:
     extent = args["range"]
 
     if args["ncpu"] > (ncpu := min(args["ncpu"], os.cpu_count())):
-        print_warn(
+        logger.warning(
             f"Requested {args['ncpu']}, but the runner only has access to {ncpu}."
         )
 
