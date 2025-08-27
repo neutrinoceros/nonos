@@ -2,44 +2,36 @@ import sys
 import unicodedata
 
 from loguru import logger
-from termcolor import cprint
 
-_BONE_EMOJI = unicodedata.lookup("BONE")
+_BANDAGE = unicodedata.lookup("ADHESIVE BANDAGE")
+_SANGLIER = unicodedata.lookup("POULTRY LEG")
+_BONE = unicodedata.lookup("BONE")
+_SKULL = unicodedata.lookup("SKULL")
+
+if sys.version_info >= (3, 11):
+    _XRAY = unicodedata.lookup("X-RAY")
+else:
+    # hardcoding the character for Python 3.10 to workaround a lookup error
+    _XRAY = "🩻"
 
 
 def configure_logger(level: int | str = 30, **kwargs) -> None:
     logger.remove()  # remove pre-existing handler
     logger.add(
-        sink=sys.stdout,
-        format="[{time:HH:mm:ss}] nonos <level>{level:<8}</level> {message}",
+        sink=sys.stderr,
+        format="[{time:HH:mm:ss}] {level.icon} <level>{level:^8}</level> {message}",
         level=level,
         **kwargs,
     )
-
-
-def print_warn(message) -> None:
-    """
-    Pretty-print a warning.
-    """
-    print(_BONE_EMOJI, end=" ", file=sys.stderr)
-    cprint("Warning", color="red", attrs=["bold"], end=" ", file=sys.stderr)
-    print(message, file=sys.stderr)
-
-
-def print_err(message) -> None:
-    """
-    Pretty-print an error message.
-    """
-    print(_BONE_EMOJI, end=" ", file=sys.stderr)
-    cprint(
-        "Error",
-        color="white",
-        on_color="on_red",
-        attrs=["bold"],
-        end=" ",
-        file=sys.stderr,
+    logger.configure(
+        levels=[
+            {"name": "DEBUG", "icon": _BANDAGE, "color": "<GREEN>"},
+            {"name": "INFO", "icon": _XRAY, "color": "<green>"},
+            {"name": "WARNING", "icon": _SANGLIER, "color": "<b><yellow>"},
+            {"name": "ERROR", "icon": _BONE, "color": "<b><red>"},
+            {"name": "CRITICAL", "icon": _SKULL, "color": "<b><RED>"},
+        ],
     )
-    print(message, file=sys.stderr)
 
 
 def parse_verbose_level(verbose: int) -> str:
