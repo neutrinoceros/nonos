@@ -1,10 +1,10 @@
 import re
 from pathlib import Path
 
-from nonos.config import DEFAULTS
+from nonos_cli.config import DEFAULTS
 
 SOURCE_DIR = Path(__file__).parents[1] / "src"
-with open(SOURCE_DIR.joinpath("nonos", "main.py")) as fh:
+with open(SOURCE_DIR.joinpath("nonos_cli", "__init__.py")) as fh:
     source = fh.read()
 
 used_keys = set(re.findall(r"""args\[['"](\w+)['"]\]""", source))

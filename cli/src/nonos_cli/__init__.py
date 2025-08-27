@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Analysis tool for idefix/pluto/fargo3d simulations (in polar coordinates).
+Visualization tool for idefix/pluto/fargo3d (M)HD simulations of protoplanetary disks
 """
 # adapted from pbenitez-llambay, gwafflard-fernandez, cmt robert & glesur
 
@@ -25,16 +25,17 @@ from tqdm import tqdm
 
 from nonos.api import GasDataSet
 from nonos.api._angle_parsing import _parse_planet_file
-from nonos.config import DEFAULTS
 from nonos.loaders import loader_from
-from nonos.logging import (
+from nonos.styling import set_mpl_style
+from nonos_cli.config import DEFAULTS
+from nonos_cli.logging import (
     configure_logger,
     logger,
     parse_verbose_level,
     print_err,
     print_warn,
 )
-from nonos.parsing import (
+from nonos_cli.parsing import (
     is_set,
     parse_image_format,
     parse_output_number_range,
@@ -42,7 +43,6 @@ from nonos.parsing import (
     range_converter,
     userval_or_default,
 )
-from nonos.styling import set_mpl_style
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -50,7 +50,8 @@ if TYPE_CHECKING:
     from matplotlib.backend_bases import FigureCanvasBase
     from matplotlib.figure import Figure
 
-NONOS_VERSION = version("nonos")
+LIB_VERSION = version("nonos")
+CLI_VERSION = version("nonos-cli")
 
 KNOWN_CMAP_PACKAGE_PREFIXES = {
     "cb": "cblind",
@@ -457,12 +458,15 @@ def main(argv: list[str] | None = None) -> int:
     # special cases: destructively consume CLI-only arguments with dict.pop
 
     if clargs.pop("logo"):
-        logo = importlib_resources.files("nonos").joinpath("logo.txt").read_text()
-        print(f"{logo}{__doc__}Version {NONOS_VERSION}")
+        logo = importlib_resources.files("nonos_cli").joinpath("logo.txt").read_text()
+        print(f"{logo}{__doc__}")
+        print(f"nonos-cli  {CLI_VERSION}")
+        print(f"nonos      {LIB_VERSION}")
         return 0
 
     if clargs.pop("version"):
-        print(NONOS_VERSION)
+        print(f"nonos-cli  {CLI_VERSION}")
+        print(f"nonos      {LIB_VERSION}")
         return 0
 
     # clargs.pop("verbose")
@@ -497,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
         conf_repr = {}
         for key in DEFAULTS:
             conf_repr[key] = args[key]
-        print(f"# Generated with nonos {NONOS_VERSION}")
+        print(f"# Generated with nonos {LIB_VERSION} + nonos-cli {CLI_VERSION}")
         s = inifix.dumps(conf_repr)
         print(inifix.format_string(s))
         return 0
