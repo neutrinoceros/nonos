@@ -108,7 +108,7 @@ def main() -> int:
         raise RuntimeError(f"failed to parse {CLI_PYPROJECT_TOML}")
 
     cp = subprocess.run(
-        ["git", "describe", "--tags", "--abbrev=0"],
+        ["git", "describe", "--tags", "--abbrev=0", "--exclude=cli-v*"],
         check=True,
         capture_output=True,
     )
