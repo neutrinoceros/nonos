@@ -33,11 +33,12 @@ jobs:
         path: dist
 
   publish:
-    name: Download (and publish)
+    name: Publish release
     needs: [build]
+    if: inputs.publish
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: release-${{ inputs.package-name }}
       url: https://pypi.org/p/${{ inputs.package-name }}
     permissions:
       id-token: write
@@ -48,5 +49,4 @@ jobs:
         path: dist
 
     - name: Publish package distributions to PyPI
-      if: inputs.publish
       uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4

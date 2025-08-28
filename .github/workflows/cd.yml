@@ -28,18 +28,18 @@ jobs:
 
   lib:
     needs: [pre-publish-checks]
+    permissions:
+      id-token: write
     uses: ./.github/workflows/build-and-publish.yml
     with:
       package-name: nonos
       publish: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-    permissions:
-      id-token: write
 
   cli:
     needs: [pre-publish-checks]
+    permissions:
+      id-token: write
     uses: ./.github/workflows/build-and-publish.yml
     with:
       package-name: nonos-cli
       publish: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/cli-v') }}
-    permissions:
-      id-token: write
