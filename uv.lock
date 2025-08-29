@@ -1060,7 +1060,7 @@ wheels = [
 
 [[package]]
 name = "nonos"
-version = "0.19.0"
+version = "0.19.1"
 source = { editable = "." }
 dependencies = [
     { name = "inifix" },
@@ -1154,7 +1154,7 @@ typecheck = [
 
 [[package]]
 name = "nonos-cli"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "cli" }
 dependencies = [
     { name = "inifix" },
