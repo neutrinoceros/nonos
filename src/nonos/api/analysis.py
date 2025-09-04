@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import os
 import sys
 import warnings
 from collections import deque
@@ -21,7 +22,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import FloatArray, PathT, PlanetData
+from nonos._types import FloatArray, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
     _parse_planet_file,
@@ -193,9 +194,9 @@ class GasField:
         on: int,
         operation: str,
         *,
-        inifile: PathT | None = None,
+        inifile: os.PathLike[str] | None = None,
         code: str | Recipe | None = None,
-        directory: PathT | None = None,
+        directory: os.PathLike[str] | None = None,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
         rotate_grid: int = -1,  # deprecated
@@ -373,7 +374,7 @@ class GasField:
 
     def save(
         self,
-        directory: PathT | None = None,
+        directory: os.PathLike[str] | None = None,
         header_only: bool = False,
     ) -> Path:
         if directory is None:
@@ -1158,13 +1159,13 @@ class GasDataSet:
 
     def __init__(
         self,
-        input_dataset: int | PathT,
+        input_dataset: os.PathLike[str] | int,
         /,
         *,
-        inifile: PathT | None = None,
+        inifile: os.PathLike[str] | None = None,
         code: str | Recipe | None = None,
         geometry: str | None = None,
-        directory: PathT | None = None,
+        directory: os.PathLike[str] | None = None,
         fluid: str | None = None,
         operation: str | None = None,
     ) -> None:
@@ -1266,9 +1267,9 @@ class GasDataSet:
         cls,
         on: int,
         *,
-        inifile: PathT | None = None,
+        inifile: os.PathLike[str] | None = None,
         code: str | Recipe | None = None,
-        directory: PathT | None = None,
+        directory: os.PathLike[str] | None = None,
         operation: str,
     ) -> "GasDataSet":
         warnings.warn(

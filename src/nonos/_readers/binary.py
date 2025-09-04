@@ -13,7 +13,7 @@ from typing import final
 import numpy as np
 
 from nonos._geometry import Geometry
-from nonos._types import BinData, FloatArray, PathT
+from nonos._types import BinData, FloatArray
 
 if sys.version_info >= (3, 11):
     from typing import assert_never
@@ -27,12 +27,15 @@ class VTKReader:
 
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,  # noqa: ARG004
     ) -> tuple[int, Path]:
-        if isinstance(file_or_number, str | Path):
+        if isinstance(file_or_number, int):
+            output_number = int(file_or_number)
+            file = Path(f"data.{output_number:04d}.vtk")
+        else:
             file = Path(file_or_number)
             if (m := re.search(r"\d+", file.name)) is None:
                 raise ValueError(
@@ -40,9 +43,6 @@ class VTKReader:
                 )
             else:
                 output_number = int(m.group())
-        else:
-            output_number = int(file_or_number)
-            file = Path(f"data.{output_number:04d}.vtk")
 
         if file == Path(file.name):
             file = Path(directory) / file
@@ -50,7 +50,7 @@ class VTKReader:
         return output_number, file
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]:
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
         directory = Path(directory)
         return sorted(directory.glob("data.*.vtk"))
 
@@ -500,9 +500,9 @@ class VTKReader:
 class FargoReaderHelper:
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,  # noqa ARG004
     ) -> tuple[int, Path]:
         directory = Path(directory).resolve()
@@ -524,7 +524,7 @@ class FargoReaderHelper:
         return output_number, file
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]:
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
         directory = Path(directory)
         return [
             fn
@@ -548,9 +548,9 @@ class FargoReaderHelper:
 class Fargo3DReader:
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]:
         return FargoReaderHelper.parse_output_number_and_filename(
@@ -558,12 +558,12 @@ class Fargo3DReader:
         )
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]:
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
         return FargoReaderHelper.get_bin_files(directory)
 
     @staticmethod
     def read(
-        file: PathT,
+        file: os.PathLike[str],
         /,
         **meta,
     ) -> BinData:
@@ -644,9 +644,9 @@ class Fargo3DReader:
 class FargoADSGReader:
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]:
         return FargoReaderHelper.parse_output_number_and_filename(
@@ -654,12 +654,12 @@ class FargoADSGReader:
         )
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]:
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
         return FargoReaderHelper.get_bin_files(directory)
 
     @staticmethod
     def read(
-        file: PathT,
+        file: os.PathLike[str],
         /,
         **meta,  # noqa: ARG004
     ) -> BinData:
@@ -715,21 +715,13 @@ class NPYReader:
 
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]:
         directory = Path(directory).resolve()
-        if isinstance(file_or_number, str | Path):
-            file = Path(file_or_number)
-            if (match := NPYReader._filename_re.fullmatch(file.name)) is None:
-                raise ValueError(f"Filename {file.name!r} is not recognized")
-            if file == Path(file.name):
-                file = directory / match.group("field_name").lower() / file
-            output_number = int(match.group("output_number"))
-            file_alt = None
-        else:
+        if isinstance(file_or_number, int):
             output_number = file_or_number
             all_bin_files = NPYReader.get_bin_files(directory / "any")
             _filter_re = re.compile(rf"^_?{prefix}_[A-Z\d]+.{output_number:04d}.npy")
@@ -744,6 +736,14 @@ class NPYReader:
             file_alt = (
                 None if file.name.startswith("_") else file.with_name(f"_{file.name}")
             )
+        else:
+            file = Path(file_or_number)
+            if (match := NPYReader._filename_re.fullmatch(file.name)) is None:
+                raise ValueError(f"Filename {file.name!r} is not recognized")
+            if file == Path(file.name):
+                file = directory / match.group("field_name").lower() / file
+            output_number = int(match.group("output_number"))
+            file_alt = None
 
         if not file.is_file():
             if file_alt is None:
@@ -757,7 +757,7 @@ class NPYReader:
         return output_number, file
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]:
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
         # return *all* loadable files
         # (not just the ones matching a particular prefix)
         directory = Path(directory).resolve()
@@ -777,7 +777,7 @@ class NPYReader:
         return sorted(file_paths)
 
     @staticmethod
-    def read(file: PathT, /, **meta) -> BinData:
+    def read(file: os.PathLike[str], /, **meta) -> BinData:
         meta.setdefault("prefix", "")
 
         ref_file = Path(file).resolve()

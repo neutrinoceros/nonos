@@ -1,7 +1,8 @@
+import os
 import warnings
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -13,15 +14,15 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from nonos._types import FloatArray, PathT
+    from nonos._types import FloatArray
 
 
 def file_analysis(
-    filename: "PathT",
+    filename: os.PathLike[str],
     *,
-    inifile: str | None = None,
+    inifile: os.PathLike[str] | None = None,
     code: str | None = None,
-    directory: Optional["PathT"] = None,
+    directory: os.PathLike[str] | None = None,
     norb: int | None = None,
 ) -> "FloatArray":
     if directory is None:
@@ -202,9 +203,9 @@ def from_data(
     coords: Coordinates,
     on: int,
     operation: str,
-    inifile: str | None = None,
+    inifile: os.PathLike[str] | None = None,
     code: str | None = None,
-    directory: str = "",
+    directory: os.PathLike[str] | None = None,
     rotate_grid: int = -1,
 ):  # pragma: no cover
     warnings.warn(
@@ -235,7 +236,7 @@ def from_file(
     field: str,
     operation: str,
     on: int,
-    directory: Optional["PathT"] = None,
+    directory: os.PathLike[str] | None = None,
 ):
     if directory is None:
         directory = Path.cwd()
