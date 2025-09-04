@@ -1205,7 +1205,6 @@ class GasDataSet:
         )
         if operation is not None:
             ignored_kwargs = []
-            msg = ""
             if fluid is not None:
                 ignored_kwargs.append("fluid")
             if geometry is not None:
