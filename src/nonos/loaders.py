@@ -4,11 +4,12 @@ __all__ = [
     "loader_from",
     "recipe_from",
 ]
+import os
 import sys
 from dataclasses import dataclass
 from enum import auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, TypedDict, final
+from typing import TYPE_CHECKING, TypedDict, final
 
 import nonos._readers as readers
 from nonos._types import BinReader, IniReader, PlanetReader
@@ -23,7 +24,7 @@ else:
 
 
 if TYPE_CHECKING:
-    from nonos._types import BinData, IniData, PathT, PlanetData
+    from nonos._types import BinData, IniData, PlanetData
 
 
 class Recipe(StrEnum):
@@ -70,12 +71,12 @@ class Loader:
             raise FileNotFoundError(pf)
         object.__setattr__(self, "parameter_file", pf)
 
-    def load_bin_data(self, file: "PathT", /, **meta) -> "BinData":
+    def load_bin_data(self, file: os.PathLike[str], /, **meta) -> "BinData":
         ini = self.load_ini_file()
         meta = ini.meta | meta
         return self.binary_reader.read(file, **meta)
 
-    def load_planet_data(self, file: "PathT") -> "PlanetData":
+    def load_planet_data(self, file: os.PathLike[str]) -> "PlanetData":
         return self.planet_reader.read(file)
 
     def load_ini_file(self) -> "IniData":
@@ -85,8 +86,8 @@ class Loader:
 def loader_from(
     *,
     code: str | None = None,
-    parameter_file: Optional["PathT"] = None,
-    directory: Optional["PathT"] = None,
+    parameter_file: os.PathLike[str] | None = None,
+    directory: os.PathLike[str] | None = None,
 ) -> Loader:
     r"""
     Compose a Loader object following a known Recipe.
@@ -134,8 +135,8 @@ def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader:
 
 def _parameter_file_from(
     *,
-    parameter_file: Optional["PathT"] = None,
-    directory: Optional["PathT"] = None,
+    parameter_file: os.PathLike[str] | None = None,
+    directory: os.PathLike[str] | None = None,
 ) -> Path:
     if parameter_file is None and directory is None:
         raise TypeError(
@@ -160,7 +161,7 @@ def _parameter_file_from(
     )
 
 
-def _parameter_file_from_dir(directory: "PathT", /) -> Path:
+def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
     directory = Path(directory).resolve()
     candidates = list(directory.glob("*.ini"))
     candidates.extend(list(directory.glob("*.par")))
@@ -213,8 +214,8 @@ def _ingredients_from(recipe: Recipe, /) -> Ingredients:
 def recipe_from(
     *,
     code: str | None = None,
-    parameter_file: Optional["PathT"] = None,
-    directory: Optional["PathT"] = None,
+    parameter_file: os.PathLike[str] | None = None,
+    directory: os.PathLike[str] | None = None,
 ) -> Recipe:
     r"""
     Determine an appropriate loader recipe from user input.

@@ -6,11 +6,11 @@ __all__ = [
     "IniData",
     "IniReader",
     "OrbitalElements",
-    "PathT",
     "PlanetData",
     "PlanetReader",
     "StrDict",
 ]
+import os
 import sys
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -27,7 +27,6 @@ else:
 if TYPE_CHECKING:
     from nonos._geometry import Geometry
 
-PathT: TypeAlias = str | Path
 StrDict: TypeAlias = dict[str, Any]
 
 FloatArray: TypeAlias = "np.ndarray[Any, np.dtype[np.float32 | np.float64]]"
@@ -143,17 +142,17 @@ class IniData:
 class BinReader(Protocol):
     @staticmethod
     def parse_output_number_and_filename(
-        file_or_number: PathT | int,
+        file_or_number: os.PathLike[str] | int,
         *,
-        directory: PathT,
+        directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]: ...
 
     @staticmethod
-    def get_bin_files(directory: PathT, /) -> list[Path]: ...
+    def get_bin_files(directory: os.PathLike[str], /) -> list[Path]: ...
 
     @staticmethod
-    def read(file: PathT, /, **meta) -> BinData: ...
+    def read(file: os.PathLike[str], /, **meta) -> BinData: ...
 
 
 class PlanetReader(Protocol):
@@ -161,9 +160,9 @@ class PlanetReader(Protocol):
     def get_planet_files(directory: Path, /) -> list[Path]: ...
 
     @staticmethod
-    def read(file: PathT, /) -> PlanetData: ...
+    def read(file: os.PathLike[str], /) -> PlanetData: ...
 
 
 class IniReader(Protocol):
     @staticmethod
-    def read(file: PathT, /) -> IniData: ...
+    def read(file: os.PathLike[str], /) -> IniData: ...

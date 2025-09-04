@@ -4,18 +4,19 @@ __all__ = [
     "IdefixVTKReader",
     "PlutoVTKReader",
 ]
+import os
 from pathlib import Path
 from typing import final
 
 import inifix
 
-from nonos._types import FrameType, IniData, PathT
+from nonos._types import FrameType, IniData
 
 
 @final
 class IdefixVTKReader:
     @staticmethod
-    def read(file: PathT, /) -> IniData:
+    def read(file: os.PathLike[str], /) -> IniData:
         class IdefixIniOutput:
             def __init__(self, *, vtk: list, **_kwargs) -> None:
                 self.vtk = float(vtk[0])
@@ -48,7 +49,7 @@ class IdefixVTKReader:
 @final
 class PlutoVTKReader:
     @staticmethod
-    def read(file: PathT, /) -> IniData:
+    def read(file: os.PathLike[str], /) -> IniData:
         class PlutoIniOutput:
             def __init__(self, *, vtk: list, **_kwargs) -> None:
                 self.vtk = float(vtk[0])
@@ -72,7 +73,7 @@ class PlutoVTKReader:
 @final
 class Fargo3DReader:
     @staticmethod
-    def read(file: PathT, /) -> IniData:
+    def read(file: os.PathLike[str], /) -> IniData:
         class Fargo3DIni:
             def __init__(
                 self,
@@ -116,7 +117,7 @@ class Fargo3DReader:
 @final
 class FargoADSGReader:
     @staticmethod
-    def read(file: PathT, /) -> IniData:
+    def read(file: os.PathLike[str], /) -> IniData:
         class FargoADSGIni:
             def __init__(
                 self,
