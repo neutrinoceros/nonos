@@ -13,6 +13,8 @@ on:
     - CITATION.cff
     - scripts/pre_publish_checks.py
 
+permissions: {}
+
 jobs:
   pre-publish-checks:
     runs-on: ubuntu-latest
