@@ -44,7 +44,7 @@ all = [
     "cblind>=2.3.0",
     "cmocean>=3.0.3",
     "cmyt>=2.0.0",
-    "lick>=0.5.1",
+    "lick>=0.6.0",
     "scipy>=1.7.2",
 ]
 
@@ -59,7 +59,7 @@ Homepage = "https://github.com/la-niche/nonos"
 test = [
     "cogapp>=3.3.0",
     "pytest-mpl>=0.15.1",
-    "pytest>=8.0.0",
+    "pytest>=9.0.0",
 ]
 covcheck = [
     {include-group = "test"},
@@ -102,8 +102,10 @@ select = [
 combine-as-imports = true
 known-first-party = ["nonos", "nonos_cli"]
 
-[tool.pytest.ini_options]
-addopts = "-ra"
+[tool.pytest]
+minversion = "9.0"
+strict = true
+addopts = ["-ra"]
 filterwarnings = [
     "error",
     'ignore:datetime\.datetime\.utcfromtimestamp\(\) is deprecated:DeprecationWarning', # https://github.com/dateutil/dateutil/pull/1285
@@ -151,6 +153,34 @@ exclude_also = [
     "^\\s*case _ as unreachable:",
     "^\\s*assert_never\\b",
 ]
+
+[tool.uv]
+no-build-package = [
+    "numpy",
+    "matplotlib",
+    "pillow",
+    "contourpy",
+    "kiwisolver",
+
+    # all of the following are from pytest-mpl (directly or not)
+    # these constraints should (mostly) become obsolete with https://github.com/matplotlib/pytest-mpl/pull/252
+    "markupsafe",
+]
+
+constraint-dependencies = [
+    # https://github.com/matplotlib/pytest-mpl/pull/252
+    "jinja2>=2.10.2",
+    # via matplotlib 3.5
+    "setuptools>=61.0.0",
+    "pyparsing>=2.4.0",
+    "fonttools>=4.24.2",
+]
+
+build-constraint-dependencies = [
+    # via matplotlib 3.5
+    "setuptools>=61.0.0",
+]
+
 
 [tool.uv.workspace]
 members = [

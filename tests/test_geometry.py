@@ -36,7 +36,7 @@ def test_get_target_geometry(axes, expected_geometry):
 
 @pytest.mark.parametrize(
     "axis",
-    list(chain.from_iterable(axes_from_geometry(g) for g in Geometry)),
+    set(chain.from_iterable(axes_from_geometry(g) for g in Geometry)),
 )
 @pytest.mark.parametrize("native_geometry", Geometry)
 def test_native_axis_from_target_axis(native_geometry, axis):
