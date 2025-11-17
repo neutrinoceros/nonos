@@ -234,6 +234,43 @@ class GasField:
         self._recipe = recipe_from(parameter_file=inifile, directory=directory)
         self._code = str(code or self._recipe)
 
+    def from_array(
+        self, *, field: str, data: np.ndarray, **substitutions
+    ) -> "GasField":
+        kwarg_to_attr: dict[str, str] = {
+            "field": "field",
+            "operation": "operation",
+            "ngeom": "native_geometry",
+            "data": "data",
+            "coords": "coords",
+            "on": "on",
+            "inifile": "inifile",
+            "directory": "directory",
+            "rotate_by": "_rotate_by",
+        }
+        acceptable_substitutions = [
+            "geometry",
+            "coords",
+            "on",
+            "directory",
+            "rotate_by",
+        ]
+        if not set(substitutions).issubset(acceptable_substitutions):
+            invalid_arguments = set(substitutions).difference(acceptable_substitutions)
+            raise TypeError(
+                f"Received at least one invalid argument: {invalid_arguments}\n"
+                f"Expected a subset of {acceptable_substitutions}"
+            )
+
+        return GasField(
+            field,
+            data,
+            **(
+                {kw: getattr(self, attr) for kw, attr in kwarg_to_attr.items()}
+                | substitutions
+            ),
+        )
+
     @property
     def code(self) -> str:
         warnings.warn(
