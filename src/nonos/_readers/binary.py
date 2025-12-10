@@ -345,10 +345,10 @@ class VTKReader:
                     phi = np.unwrap(
                         np.arctan2(ycart[0, n2 // 2, :], xcart[0, n2 // 2, :])
                     )
-                    theta = np.arccos(
-                        zcart[0, :, 0]
-                        / np.sqrt(xcart[0, :, 0] ** 2 + zcart[0, :, 0] ** 2)
-                    )
+                    Rcyl = np.sqrt(xcart[0, :, 0] ** 2 + zcart[0, :, 0] ** 2)
+                    # regularize the denominator to avoid spurious divide-by-zero-warnings
+                    Rcyl_reg = np.where(zcart[0, :, 0] == 0, 1.0, Rcyl)
+                    theta = np.arccos(zcart[0, :, 0] / Rcyl_reg)
                 else:
                     r = np.sqrt(
                         xcart[:, 0, 0] ** 2 + ycart[:, 0, 0] ** 2 + zcart[:, 0, 0] ** 2
