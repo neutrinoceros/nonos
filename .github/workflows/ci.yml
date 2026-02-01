@@ -47,13 +47,13 @@ jobs:
           python-version: '3.10'
           label: nonos[all]_oldest-deps-full-no_workspace
           package: --package nonos
-          install-args: --resolution=lowest --all-extras --no-install-workspace
+          install-args: --resolution=lowest --all-extras
           test-dir: tests
         - os: ubuntu-22.04
           python-version: '3.10'
           label: nonos-cli_oldest-deps-full_no-workspace
           package: --package nonos-cli
-          install-args: --resolution=lowest --all-extras --no-install-workspace
+          install-args: --resolution=lowest --all-extras
           test-dir: cli/tests
         - os: ubuntu-latest
           python-version: '3.14'
