@@ -203,7 +203,7 @@ class GasField:
     ) -> None:
         self.field = field
         self.operation = operation
-        self.native_geometry = Geometry(ngeom)
+        self._native_geometry = Geometry(ngeom)
         self.data = data
         self.coords = coords
         self.on = on
@@ -252,6 +252,10 @@ class GasField:
         """
         i, j, k = (max(1, n - 1) for n in self.coords.shape)
         return i, j, k
+
+    @property
+    def native_geometry(self) -> Geometry:
+        return self._native_geometry
 
     def map(
         self,
@@ -1233,7 +1237,7 @@ class GasDataSet:
             fluid=fluid,
         )
 
-        self.native_geometry = self._read.geometry
+        self._native_geometry = self._read.geometry
         self.dict = self._read.data
         self.coords = Coordinates(
             self.native_geometry,
@@ -1260,6 +1264,10 @@ class GasDataSet:
             "code": code.removesuffix("_vtk") if code is not None else None,
             "directory": directory,
         }
+
+    @property
+    def native_geometry(self) -> Geometry:
+        return self._native_geometry
 
     @classmethod
     def from_npy(
