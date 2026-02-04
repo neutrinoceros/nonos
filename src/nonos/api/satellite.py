@@ -2,7 +2,7 @@ import os
 import warnings
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 import numpy as np
 
@@ -62,6 +62,9 @@ def file_analysis(
     return columns
 
 
+InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]
+
+
 class NonosLick:
     def __init__(
         self,
@@ -78,8 +81,8 @@ class NonosLick:
         size_interpolated: int = 1000,
         niter_lic: int = 6,
         kernel_length: int = 101,
-        method: str = "linear",
-        method_background: str = "nearest",
+        method: InterpMethod = "linear",
+        method_background: InterpMethod = "nearest",
         light_source: bool = True,
     ):
         if find_spec("lick") is None:
