@@ -5,6 +5,13 @@ import pytest
 from numpy.testing import assert_allclose
 
 from nonos._readers.binary import NPYReader, VTKReader
+from nonos._types import BinData
+
+
+def test_bindata():
+    bd = BinData.default_init()
+    with pytest.raises(TypeError):
+        bd.finalize()
 
 
 class TestVTKReader:

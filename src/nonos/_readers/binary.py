@@ -19,6 +19,10 @@ if sys.version_info >= (3, 11):
     from typing import assert_never
 else:
     from typing_extensions import assert_never
+if sys.version_info >= (3, 13):
+    from copy import replace
+else:
+    from dataclasses import replace
 
 
 @final
@@ -70,12 +74,9 @@ class VTKReader:
         # define our datastructure
         V = BinData.default_init()
 
-        # raw data which will be read from the file
-        V["data"] = {}
-
         # initialize geometry
         if meta["geometry"] is not None:
-            V["geometry"] = Geometry(meta["geometry"])
+            V = replace(V, geometry=Geometry(meta["geometry"]))
 
         native_coordinates = {}
 
@@ -130,7 +131,7 @@ class VTKReader:
                                 "inconsistent with GEOMETRY flag from the VTK file "
                                 f"({thisgeometry!r})"
                             )
-                    V["geometry"] = thisgeometry
+                    V = replace(V, geometry=thisgeometry)
                 elif entry == "PERIODICITY":
                     # skip
                     fid.seek(dint.itemsize * 3, os.SEEK_CUR)
@@ -149,7 +150,7 @@ class VTKReader:
             # read next line
             s = fid.readline()  # DIMENSIONS...
 
-        if not isinstance(V["geometry"], Geometry):  # pragma: no cover
+        if V.geometry is BinData.__dataclass_fields__["geometry"].default:
             fid.close()
             raise RuntimeError(
                 "Geometry couldn't be determined from data. "
@@ -162,7 +163,7 @@ class VTKReader:
 
         z: np.ndarray | np.memmap
 
-        if V["geometry"] is Geometry.CARTESIAN:
+        if V.geometry is Geometry.CARTESIAN:
             s = fid.readline()  # X_COORDINATES NX float
             # we store the file pointer position before computing points
             inipos = fid.tell()
@@ -207,32 +208,27 @@ class VTKReader:
                 # The file contains face coordinates, so we extrapolate to get the cell center coordinates.
                 if n1 > 1:
                     n1 -= 1
-                    if meta["cell"] == "centers":
-                        V["x1"] = 0.5 * (x[1:] + x[:-1])
-                    elif meta["cell"] == "edges":
-                        V["x1"] = x
+                    V = replace(
+                        V, x1=0.5 * (x[1:] + x[:-1]) if meta["cell"] == "centers" else x
+                    )
                 else:
-                    V["x1"] = x
+                    V = replace(V, x1=x)
                 if n2 > 1:
                     n2 -= 1
-                    if meta["cell"] == "centers":
-                        V["x2"] = 0.5 * (y[1:] + y[:-1])
-                    elif meta["cell"] == "edges":
-                        V["x2"] = y
+                    V = replace(
+                        V, x2=0.5 * (y[1:] + y[:-1]) if meta["cell"] == "centers" else y
+                    )
                 else:
-                    V["x2"] = y
+                    V = replace(V, x2=y)
                 if n3 > 1:
                     n3 -= 1
-                    if meta["cell"] == "centers":
-                        V["x3"] = 0.5 * (z[1:] + z[:-1])
-                    elif meta["cell"] == "edges":
-                        V["x3"] = z
+                    V = replace(
+                        V, x3=0.5 * (z[1:] + z[:-1]) if meta["cell"] == "centers" else z
+                    )
                 else:
-                    V["x3"] = z
+                    V = replace(V, x3=z)
             elif point_type == "POINT_DATA":
-                V["x1"] = x
-                V["x2"] = y
-                V["x3"] = z
+                V = replace(V, x1=x, x2=y, x3=z)
 
             if (grid_size := n1 * n2 * n3) != npoints:  # pragma: no cover
                 fid.close()
@@ -242,7 +238,7 @@ class VTKReader:
                 )
             del grid_size
 
-        elif V["geometry"] is Geometry.POLAR or V["geometry"] is Geometry.SPHERICAL:
+        elif V.geometry is Geometry.POLAR or V.geometry is Geometry.SPHERICAL:
             if n3 == 1:
                 is2d = 1
             else:
@@ -285,7 +281,7 @@ class VTKReader:
             del new_shape
 
             # Reconstruct the polar coordinate system
-            if V["geometry"] is Geometry.POLAR:
+            if V.geometry is Geometry.POLAR:
                 r = np.sqrt(xcart[:, 0, 0] ** 2 + ycart[:, 0, 0] ** 2)
                 theta = np.unwrap(np.arctan2(ycart[0, :, 0], xcart[0, :, 0]))
                 z = zcart[0, 0, :]
@@ -303,43 +299,37 @@ class VTKReader:
                 if meta["cell"] == "edges":
                     if n1 > 1:
                         n1 -= 1
-                        V["x1"] = r
-                    else:
-                        V["x1"] = r
                     if n2 > 1:
                         n2 -= 1
-                        V["x2"] = theta
-                    else:
-                        V["x2"] = theta
                     if n3 > 1:
                         n3 -= 1
-                        V["x3"] = z
-                    else:
-                        V["x3"] = z
+                    V = replace(V, x1=r, x2=theta, x3=z)
 
                 # Perform averaging on coordinate system to get cell centers
                 # The file contains face coordinates, so we extrapolate to get the cell center coordinates.
                 elif meta["cell"] == "centers":
                     if n1 > 1:
                         n1 -= 1
-                        V["x1"] = 0.5 * (r[1:] + r[:-1])
+                        V = replace(V, x1=0.5 * (r[1:] + r[:-1]))
                     else:
-                        V["x1"] = r
+                        V = replace(V, x1=r)
                     if n2 > 1:
                         n2 -= 1
-                        V["x2"] = (0.5 * (theta[1:] + theta[:-1]) + np.pi) % (
-                            2.0 * np.pi
-                        ) - np.pi
+                        V = replace(
+                            V,
+                            x2=(0.5 * (theta[1:] + theta[:-1]) + np.pi) % (2.0 * np.pi)
+                            - np.pi,
+                        )
                     else:
-                        V["x2"] = theta
+                        V = replace(V, x2=theta)
                     if n3 > 1:
                         n3 -= 1
-                        V["x3"] = 0.5 * (z[1:] + z[:-1])
+                        V = replace(V, x3=0.5 * (z[1:] + z[:-1]))
                     else:
-                        V["x3"] = z
+                        V = replace(V, x3=z)
 
             # Reconstruct the spherical coordinate system
-            elif V["geometry"] is Geometry.SPHERICAL:
+            elif V.geometry is Geometry.SPHERICAL:
                 if is2d:
                     r = np.sqrt(xcart[:, 0, 0] ** 2 + zcart[:, 0, 0] ** 2)
                     phi = np.unwrap(
@@ -381,42 +371,34 @@ class VTKReader:
                 if meta["cell"] == "edges":
                     if n1 > 1:
                         n1 -= 1
-                        V["x1"] = r
-                    else:
-                        V["x1"] = r
                     if n2 > 1:
                         n2 -= 1
-                        V["x2"] = theta
-                    else:
-                        V["x2"] = theta
                     if n3 > 1:
                         n3 -= 1
-                        V["x3"] = phi
-                    else:
-                        V["x3"] = phi
+                    V = replace(V, x1=r, x2=theta, x3=phi)
 
                 # Perform averaging on coordinate system to get cell centers
                 # The file contains face coordinates, so we extrapolate to get the cell center coordinates.
                 elif meta["cell"] == "centers":
                     if n1 > 1:
                         n1 -= 1
-                        V["x1"] = 0.5 * (r[1:] + r[:-1])
+                        V = replace(V, x1=0.5 * (r[1:] + r[:-1]))
                     else:
-                        V["x1"] = r
+                        V = replace(V, x1=r)
                     if n2 > 1:
                         n2 -= 1
-                        V["x2"] = 0.5 * (theta[1:] + theta[:-1])
+                        V = replace(V, x2=0.5 * (theta[1:] + theta[:-1]))
                     else:
-                        V["x2"] = theta
+                        V = replace(V, x2=theta)
                     if n3 > 1:
                         n3 -= 1
-                        V["x3"] = 0.5 * (phi[1:] + phi[:-1])
+                        V = replace(V, x3=0.5 * (phi[1:] + phi[:-1]))
                     else:
-                        V["x3"] = phi
+                        V = replace(V, x3=phi)
             else:
-                assert_never(V["geometry"])
+                assert_never(V.geometry)
         else:
-            assert_never(V["geometry"])
+            assert_never(V.geometry)
 
         if meta["computedata"]:
             new_shape = n3, n2, n1
@@ -444,7 +426,7 @@ class VTKReader:
                     # we set the file pointer position to this offset
                     fid.seek(newpos, os.SEEK_SET)
 
-                    V["data"][varname] = np.transpose(array)
+                    V.data[varname] = np.transpose(array)
                 elif datatype == "VECTORS":
                     # we store the file pointer position before computing points
                     inipos = fid.tell()
@@ -460,7 +442,7 @@ class VTKReader:
 
                     for i, suffix in enumerate("XYZ"):
                         name = f"{varname}_{suffix}"
-                        V["data"][name] = np.transpose(Q[i::3].reshape(new_shape))
+                        V.data[name] = np.transpose(Q[i::3].reshape(new_shape))
 
                 else:  # pragma: no cover
                     fid.close()
@@ -491,9 +473,9 @@ class VTKReader:
 
         if native_coordinates:
             for native_field, attr in native2attr.items():
-                V[attr] = native_coordinates[native_field]
+                V = replace(V, **{attr: native_coordinates[native_field]})  # type: ignore
 
-        return BinData(**V)
+        return V.finalize()
 
 
 @final
@@ -580,7 +562,6 @@ class Fargo3DReader:
 
         V = BinData.default_init()
         geometry_str = meta["COORDINATES"]
-        V["data"] = {}
 
         domain_x = np.loadtxt(directory / "domain_x.dat")
         # We avoid ghost cells
@@ -589,23 +570,29 @@ class Fargo3DReader:
         if domain_z.shape[0] > 6:
             domain_z = domain_z[3:-3]
 
-        V["x1"] = domain_y  # X-Edge
+        V = replace(V, x1=domain_y)  # X-Edge
         if geometry_str == "cylindrical":
-            V["geometry"] = Geometry.POLAR
-            V["x2"] = domain_x  # Y-Edge
-            V["x3"] = domain_z  # Z-Edge #latitude
+            V = replace(
+                V,
+                geometry=Geometry.POLAR,
+                x2=domain_x,  # Y-Edge
+                x3=domain_z,  # Z-Edge #latitude
+            )
             pairs = [("RHO", "dens"), ("VX1", "vy"), ("VX2", "vx"), ("VX3", "vz")]
         elif geometry_str == "spherical":
-            V["geometry"] = Geometry.SPHERICAL
-            V["x2"] = domain_z  # Z-Edge #latitude
-            V["x3"] = domain_x  # Y-Edge
+            V = replace(
+                V,
+                geometry=Geometry.SPHERICAL,
+                x2=domain_z,  # Z-Edge #latitude
+                x3=domain_x,  # Y-Edge
+            )
             pairs = [("RHO", "dens"), ("VX1", "vy"), ("VX2", "vz"), ("VX3", "vx")]
         else:
             raise NotImplementedError(f"Geometry {geometry_str!r} is not supported")
 
-        n1 = len(V["x1"]) - 1
-        n2 = len(V["x2"]) - 1
-        n3 = len(V["x3"]) - 1
+        n1 = len(V.x1) - 1
+        n2 = len(V.x2) - 1
+        n3 = len(V.x3) - 1
         if geometry_str == "cylindrical":
             grid_shape = n3, n1, n2
             tuple_transposition = (1, 2, 0)
@@ -630,14 +617,14 @@ class Fargo3DReader:
             file = directory / f"{fluid}{field}{output_number}.dat"
             if not file.is_file():
                 continue
-            V["data"][key] = _read_array(file)
+            V.data[key] = _read_array(file)
 
-        if not V["data"]:
+        if not V.data:
             raise FileNotFoundError(
                 f"No file matches the pattern '{fluid}*{output_number}.dat'"
             )
 
-        return BinData(**V)
+        return V.finalize()
 
 
 @final
@@ -668,8 +655,7 @@ class FargoADSGReader:
         )
 
         V = BinData.default_init()
-        V["geometry"] = Geometry.POLAR
-        V["data"] = {}
+        V = replace(V, geometry=Geometry.POLAR)
 
         phi = np.loadtxt(directory / "used_azi.dat")[:, 0]
         domain_x = np.zeros(len(phi) + 1)
@@ -680,13 +666,16 @@ class FargoADSGReader:
         domain_y = np.loadtxt(directory / "used_rad.dat")
         domain_z = np.zeros(2)
 
-        V["x1"] = domain_y  # X-Edge
-        V["x2"] = domain_x  # Y-Edge
-        V["x3"] = domain_z  # Z-Edge #latitude
+        V = replace(
+            V,
+            x1=domain_y,  # X-Edge
+            x2=domain_x,  # Y-Edge
+            x3=domain_z,  # Z-Edge #latitude
+        )
 
-        n1 = len(V["x1"]) - 1
-        n2 = len(V["x2"]) - 1
-        n3 = len(V["x3"]) - 1
+        n1 = len(V.x1) - 1
+        n2 = len(V.x2) - 1
+        n3 = len(V.x3) - 1
         grid_shape = n3, n1, n2
 
         def _read_array(file: Path):
@@ -700,8 +689,8 @@ class FargoADSGReader:
             file = directory / f"gas{field}{output_number}.dat"
             if not file.is_file():
                 continue
-            V["data"][key] = _read_array(file)
-        return BinData(**V)
+            V.data[key] = _read_array(file)
+        return V.finalize()
 
 
 class NPYReader:

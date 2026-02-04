@@ -20,9 +20,9 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, final
 import numpy as np
 
 if sys.version_info >= (3, 11):
-    from typing import assert_never
+    from typing import Self, assert_never
 else:
-    from typing_extensions import assert_never
+    from typing_extensions import Self, assert_never
 
 if TYPE_CHECKING:
     from nonos._geometry import Geometry
@@ -48,10 +48,28 @@ class BinData:
     x3: FloatArray
 
     @classmethod
-    def default_init(cls):
-        return {
-            field.name: field.default for field in cls.__dataclass_fields__.values()
-        }
+    def default_init(cls) -> "BinData":
+        return BinData(
+            **(
+                {  # type: ignore
+                    field.name: field.default
+                    for field in cls.__dataclass_fields__.values()
+                }
+                | {"data": {}}
+            )
+        )
+
+    def finalize(self) -> Self:
+        missing_fields = [
+            f.name
+            for f in self.__dataclass_fields__.values()
+            if getattr(self, f.name) is f.default
+        ]
+        if any(missing_fields):
+            raise TypeError(
+                f"The following fields were not initialized: {missing_fields}"
+            )
+        return self
 
 
 @final
