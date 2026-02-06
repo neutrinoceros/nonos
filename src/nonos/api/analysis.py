@@ -199,7 +199,6 @@ class GasField:
         directory: os.PathLike[str] | None = None,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-        rotate_grid: int = -1,  # deprecated
     ) -> None:
         self.field = field
         self.operation = operation
@@ -222,10 +221,7 @@ class GasField:
         self._rotate_by = _parse_rotation_angle(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
-            planet_number_argument=(
-                "rotate_grid",
-                (rotate_grid if rotate_grid >= 0 else None),
-            ),
+            planet_number_argument=("rotate_grid", None),
             stacklevel=2,
             planet_azimuth_finder=self,
         )

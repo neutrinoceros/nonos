@@ -209,7 +209,6 @@ def from_data(
     inifile: os.PathLike[str] | None = None,
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
-    rotate_grid: int = -1,
 ):  # pragma: no cover
     warnings.warn(
         "nonos.api.satellite.from_data is deprecated and will be removed "
@@ -230,7 +229,6 @@ def from_data(
         inifile=inifile,
         code=code,
         directory=directory,
-        rotate_grid=rotate_grid,
     )
 
 
