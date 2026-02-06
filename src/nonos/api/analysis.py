@@ -230,19 +230,6 @@ class GasField:
             planet_azimuth_finder=self,
         )
 
-        # TODO: remove this after deprecation
-        self._recipe = recipe_from(parameter_file=inifile, directory=directory)
-        self._code = str(code or self._recipe)
-
-    @property
-    def code(self) -> str:
-        warnings.warn(
-            "GasField.code is deprecated and will be removed in a future version.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._code
-
     @property
     def shape(self) -> tuple[int, int, int]:
         """
