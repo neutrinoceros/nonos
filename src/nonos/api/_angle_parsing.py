@@ -4,12 +4,7 @@ from typing import Protocol
 
 
 class PlanetAzimuthFinder(Protocol):
-    def find_phip(
-        self,
-        planet_number: int | None = None,
-        *,
-        planet_file: str | None = None,
-    ) -> float: ...
+    def __call__(self, *, planet_file: str) -> float: ...
 
 
 def _parse_planet_file(
@@ -61,7 +56,7 @@ def _parse_rotation_angle(
         rotate_with = _parse_planet_file(planet_number=planet_number)
 
     if rotate_with is not None:
-        rotate_by = planet_azimuth_finder.find_phip(planet_file=rotate_with)
+        rotate_by = planet_azimuth_finder(planet_file=rotate_with)
 
     if rotate_by is None:
         # this is never supposed to happen, but it's needed to convince mypy that

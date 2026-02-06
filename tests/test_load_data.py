@@ -261,6 +261,6 @@ def test_api_vtk_slices_idefix(test_data_dir, geometry, slice_no, operation_name
     np.testing.assert_array_almost_equal(rho_slice_pp.data, rho_slice_cut.data)
 
     np.testing.assert_array_almost_equal(
-        rho_slice_pp.coords.get_axis_array(axis),
-        rho_slice_cut.coords.get_axis_array(axis),
+        rho_slice_pp.coordinates.get_axis_array(axis),
+        rho_slice_cut.coordinates.get_axis_array(axis),
     )

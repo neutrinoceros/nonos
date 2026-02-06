@@ -184,18 +184,18 @@ def compute(
     ref: GasField,
 ):
     ret_data = data
-    ret_coords = ref.coords
+    ret_coords = ref.coordinates
     geometry = ret_coords.geometry
-    return GasField(
+    return GasField._legacy_init(
         field,
         ret_data,
         ret_coords,
         geometry,
-        ref.on,
+        ref.output_number,
         operation=ref.operation,
-        inifile=ref.inifile,
-        directory=ref.directory,
-        rotate_by=ref._rotate_by,
+        inifile=ref.loader.parameter_file,
+        directory=ref.loader.parameter_file.parent,
+        rotate_by=ref.rotate_by,
     )
 
 
@@ -219,7 +219,7 @@ def from_data(
     ret_data = data
     ret_coords = coords
     geometry = coords.geometry
-    return GasField(
+    return GasField._legacy_init(
         field,
         ret_data,
         ret_coords,
@@ -255,7 +255,7 @@ def from_file(
     with open(fileout, "rb") as file:
         ret_data = np.load(file, allow_pickle=True)
 
-    return GasField(
+    return GasField._legacy_init(
         field,
         ret_data,
         ret_coords,
