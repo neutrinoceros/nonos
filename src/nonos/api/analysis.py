@@ -7,6 +7,7 @@ from collections import deque
 from collections.abc import ItemsView, KeysView, ValuesView
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from shutil import copyfile
 from typing import TYPE_CHECKING, Any
@@ -29,13 +30,17 @@ from nonos.api._angle_parsing import (
     _parse_rotation_angle,
 )
 from nonos.api.tools import find_around, find_nearest
-from nonos.loaders import Recipe, loader_from, recipe_from
+from nonos.loaders import Loader, Recipe, loader_from, recipe_from
 
 if sys.version_info >= (3, 11):
     from typing import assert_never
 else:
     from typing_extensions import assert_never
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.artist import Artist
@@ -173,20 +178,38 @@ class Plotable:
         return artist
 
 
+def _get_ind_output_number(loader: Loader, output_number: int, time: FloatArray) -> int:
+    ini = loader.load_ini_file()
+    target_time = ini.output_time_interval * output_number
+    return find_nearest(time, target_time)
+
+
+def _find_planet_azimuth(
+    loader: Loader,
+    output_number: int,
+    *,
+    planet_file: str,
+) -> float:
+    data_dir = loader.parameter_file.parent
+    pd = loader.planet_reader.read(data_dir / planet_file)
+    ind_on = _get_ind_output_number(loader, output_number, pd.t)
+    return np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi)
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
 class GasField:
-    """Idefix field class
+    name: str
+    data: FloatArray
+    coordinates: Coordinates
+    native_geometry: Geometry
+    output_number: int
+    operation: str
+    loader: Loader
+    rotate_by: float = 0.0
 
-    Attributes
-    ==========
-    data : array corresponding to the 3D data cube.
-    coords : Coordinates of the data.
-        Edge of the cells.
-    coordsmed : Coordinates of the data.
-        Center of the cells.
-    """
-
-    def __init__(
-        self,
+    @classmethod
+    def _legacy_init(
+        cls,
         field: str,
         data: np.ndarray,
         coords: Coordinates,
@@ -199,32 +222,57 @@ class GasField:
         directory: os.PathLike[str] | None = None,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-    ) -> None:
-        self.field = field
-        self.operation = operation
-        self._native_geometry = Geometry(ngeom)
-        self.data = data
-        self.coords = coords
-        self.on = on
-
-        if directory is None:
-            directory = Path.cwd()
-        self.directory = Path(directory)
-
-        self._loader = loader_from(
+    ) -> "GasField":
+        loader = loader_from(
             code=code,
             parameter_file=inifile,
-            directory=directory,
+            directory=Path.cwd() if directory is None else Path(directory),
         )
-        self.inifile = self._loader.parameter_file
+        return GasField(
+            name=field,
+            data=data,
+            coordinates=coords,
+            native_geometry=Geometry(ngeom),
+            output_number=on,
+            operation=operation,
+            loader=loader,
+            rotate_by=_parse_rotation_angle(
+                rotate_by=rotate_by,
+                rotate_with=rotate_with,
+                planet_number_argument=("rotate_grid", None),
+                stacklevel=2,
+                planet_azimuth_finder=partial(
+                    _find_planet_azimuth,
+                    loader=loader,
+                    output_number=on,
+                ),
+            ),
+        )
 
-        self._rotate_by = _parse_rotation_angle(
-            rotate_by=rotate_by,
-            rotate_with=rotate_with,
-            planet_number_argument=("rotate_grid", None),
-            stacklevel=2,
-            planet_azimuth_finder=self,
-        )
+    @property
+    @deprecated("Use GasField.name instead")
+    def field(self) -> str:
+        return self.name
+
+    @property
+    @deprecated("Use GasField.loader.parameter_file instead")
+    def inifile(self) -> Path:
+        return self.loader.parameter_file
+
+    @property
+    @deprecated("Use GasField.coordinates instead")
+    def coords(self) -> Coordinates:
+        return self.coordinates
+
+    @property
+    @deprecated("Use GasField.output_number instead")
+    def on(self) -> int:
+        return self.output_number
+
+    @property
+    @deprecated("Use GasField.loader.parameter_file.parent instead")
+    def directory(self) -> Path:
+        return self.loader.parameter_file.parent
 
     @property
     def shape(self) -> tuple[int, int, int]:
@@ -233,12 +281,8 @@ class GasField:
         =======
         shape : tuple
         """
-        i, j, k = (max(1, n - 1) for n in self.coords.shape)
+        i, j, k = (max(1, n - 1) for n in self.coordinates.shape)
         return i, j, k
-
-    @property
-    def native_geometry(self) -> Geometry:
-        return self._native_geometry
 
     def map(
         self,
@@ -252,10 +296,14 @@ class GasField:
             rotate_with=rotate_with,
             planet_number_argument=("planet_corotation", planet_corotation),
             stacklevel=2,
-            planet_azimuth_finder=self,
+            planet_azimuth_finder=partial(
+                _find_planet_azimuth,
+                loader=self.loader,
+                output_number=self.output_number,
+            ),
         )
 
-        data_key = self.field
+        data_key = self.name
         # we count the number of 1 in the shape of the data, which gives the real dimension of the data,
         # i.e. the number of reductions already performed (0 -> 3D, 1 -> 2D, 2 -> 1D)
         if self.shape.count(1) not in (1, 2):
@@ -264,12 +312,12 @@ class GasField:
 
         if dimension == 1:
             axis_1 = Axis.from_label(wanted[0])
-            meshgrid_conversion = self.coords._meshgrid_conversion_1d(axis_1)
+            meshgrid_conversion = self.coordinates._meshgrid_conversion_1d(axis_1)
 
             abscissa_value = list(meshgrid_conversion.values())[0]
             abscissa_key = list(meshgrid_conversion.keys())[0]
-            if "phi" in wanted and not _fequal(self._rotate_by, rotate_by):
-                phicoord = self.coords.get_axis_array(Axis.AZIMUTH) - rotate_by
+            if "phi" in wanted and not _fequal(self.rotate_by, rotate_by):
+                phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 ipi = find_nearest(phicoord, 0)
                 if abs(0 - phicoord[ipi]) > abs(
                     np.ediff1d(find_around(phicoord, 0))[0]
@@ -300,7 +348,9 @@ class GasField:
             axis_1 = Axis.from_label(axis_1_str)
             axis_2 = Axis.from_label(axis_2_str)
 
-            meshgrid_conversion = self.coords._meshgrid_conversion_2d(axis_1, axis_2)
+            meshgrid_conversion = self.coordinates._meshgrid_conversion_2d(
+                axis_1, axis_2
+            )
             # meshgrid in polar coordinates P, R (if "R", "phi") or R, P (if "phi", "R")
             # idem for all combinations of R,phi,z
             abscissa_value, ordinate_value = (
@@ -308,11 +358,11 @@ class GasField:
                 meshgrid_conversion[axis_2],
             )
             abscissa_key, ordinate_key = (axis_1, axis_2)
-            native_plane_axes = self.coords.native_from_wanted(axis_1, axis_2)
+            native_plane_axes = self.coordinates.native_from_wanted(axis_1, axis_2)
             if Axis.AZIMUTH in native_plane_axes and not _fequal(
-                self._rotate_by, rotate_by
+                self.rotate_by, rotate_by
             ):
-                phicoord = self.coords.get_axis_array(Axis.AZIMUTH) - rotate_by
+                phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 # ipi = find_nearest(phicoord, np.pi)
                 # if (abs(np.pi-phicoord[ipi])>abs(np.ediff1d(find_around(phicoord, np.pi))[0])):
                 #     ipi = find_nearest(phicoord, -np.pi)
@@ -370,8 +420,8 @@ class GasField:
             directory = Path(directory)
         operation = self.operation
         headerdir = directory / "header"
-        subdir = directory / self.field.lower()
-        file = subdir / f"{operation}_{self.field}.{self.on:04d}.npy"
+        subdir = directory / self.name.lower()
+        file = subdir / f"{operation}_{self.name}.{self.output_number:04d}.npy"
         if not header_only:
             if not file.is_file():
                 subdir.mkdir(exist_ok=True, parents=True)
@@ -385,7 +435,7 @@ class GasField:
         if (len(group_of_files) > 0 and not header_file.is_file()) or header_only:
             headerdir.mkdir(exist_ok=True, parents=True)
             if not header_file.is_file():
-                dictsaved = self.coords.to_dict()
+                dictsaved = self.coordinates.to_dict()
 
                 def is_array(item: tuple[str, Any]) -> bool:
                     _key, value = item
@@ -396,8 +446,8 @@ class GasField:
                 with open(header_file, "w") as hfile:
                     json.dump(dictsaved, hfile, indent=2)
 
-        src = self.inifile.resolve()
-        dest = directory / self.inifile.name
+        src = self.loader.parameter_file.resolve()
+        dest = directory / self.loader.parameter_file.name
         if dest != src:
             copyfile(src, dest)
 
@@ -406,11 +456,11 @@ class GasField:
     def find_ir(self, distance: float = 1.0):
         if self.native_geometry is Geometry.POLAR:
             return find_nearest(
-                self.coords.get_axis_array_med(Axis.CYLINDRICAL_RADIUS), distance
+                self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS), distance
             )
         elif self.native_geometry is Geometry.SPHERICAL:
             return find_nearest(
-                self.coords.get_axis_array_med(Axis.SPHERICAL_RADIUS), distance
+                self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS), distance
             )
         elif self.native_geometry is Geometry.CARTESIAN:
             raise NotImplementedError
@@ -422,10 +472,10 @@ class GasField:
             self.native_geometry is Geometry.CARTESIAN
             or self.native_geometry is Geometry.POLAR
         ):
-            arr = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
+            arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
             return find_nearest(arr, altitude)
         elif self.native_geometry is Geometry.SPHERICAL:
-            arr = self.coords.get_axis_array_med(Axis.COLATITUDE)
+            arr = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
             return find_nearest(arr, np.pi / 2 - altitude)
         else:
             assert_never(self.native_geometry)
@@ -435,7 +485,7 @@ class GasField:
             self.native_geometry is Geometry.POLAR
             or self.native_geometry is Geometry.SPHERICAL
         ):
-            phiarr = self.coords.get_axis_array(Axis.AZIMUTH)
+            phiarr = self.coordinates.get_axis_array(Axis.AZIMUTH)
             mod = len(phiarr) - 1
             return find_nearest(phiarr, phi) % mod
         elif self.native_geometry is Geometry.CARTESIAN:
@@ -452,13 +502,11 @@ class GasField:
         planet_file = _parse_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
-        file = self.directory / planet_file
-        return self._loader.load_planet_data(file)
+        file = self.loader.parameter_file.parent / planet_file
+        return self.loader.load_planet_data(file)
 
     def _get_ind_output_number(self, time) -> int:
-        ini = self._loader.load_ini_file()
-        target_time = ini.output_time_interval * self.on
-        return find_nearest(time, target_time)
+        return _get_ind_output_number(self.loader, self.output_number, time)
 
     def find_rp(
         self,
@@ -476,7 +524,7 @@ class GasField:
         *,
         planet_file: str | None = None,
     ) -> float:
-        ini = self._loader.load_ini_file()
+        ini = self.loader.load_ini_file()
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         oe = pd.get_orbital_elements(ini.frame)
         ind_on = self._get_ind_output_number(pd.t)
@@ -488,9 +536,14 @@ class GasField:
         *,
         planet_file: str | None = None,
     ) -> float:
-        pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
-        ind_on = self._get_ind_output_number(pd.t)
-        return np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi)
+        return _find_planet_azimuth(
+            self.loader,
+            self.output_number,
+            planet_file=_parse_planet_file(
+                planet_file=planet_file,
+                planet_number=planet_number,
+            ),
+        )
 
     @staticmethod
     def _parse_operation_name(
@@ -525,12 +578,12 @@ class GasField:
         elif self.native_geometry is Geometry.POLAR:
             ret_coords = Coordinates(
                 self.native_geometry,
-                self.coords.R,
-                self.coords.get_axis_array("phi"),
-                find_around(self.coords.z, self.coords.zmed[imid]),
+                self.coordinates.R,
+                self.coordinates.get_axis_array("phi"),
+                find_around(self.coordinates.z, self.coordinates.zmed[imid]),
             )
-            R = self.coords.Rmed
-            z = self.coords.zmed
+            R = self.coordinates.Rmed
+            z = self.coordinates.zmed
             integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
             # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
             for i in range(self.shape[0]):
@@ -540,7 +593,7 @@ class GasField:
                     km = find_nearest(z, -R[i] * theta)
                     kp = find_nearest(z, R[i] * theta)
                 integral[i, :] = np.sum(
-                    (self.data[i, :, :] * np.ediff1d(self.coords.z)[None, :])[
+                    (self.data[i, :, :] * np.ediff1d(self.coordinates.z)[None, :])[
                         :, km : kp + 1
                     ],
                     axis=1,
@@ -553,35 +606,39 @@ class GasField:
         elif self.native_geometry is Geometry.SPHERICAL:
             ret_coords = Coordinates(
                 self.native_geometry,
-                self.coords.get_axis_array("r"),
+                self.coordinates.get_axis_array("r"),
                 find_around(
-                    self.coords.get_axis_array("theta"),
-                    self.coords.get_axis_array_med("theta")[imid],
+                    self.coordinates.get_axis_array("theta"),
+                    self.coordinates.get_axis_array_med("theta")[imid],
                 ),
-                self.coords.get_axis_array("phi"),
+                self.coordinates.get_axis_array("phi"),
             )
             km = find_nearest(
-                self.coords.get_axis_array("theta"),
-                self.coords.get_axis_array("theta").min(),
+                self.coordinates.get_axis_array("theta"),
+                self.coordinates.get_axis_array("theta").min(),
             )
             kp = find_nearest(
-                self.coords.get_axis_array("theta"),
-                self.coords.get_axis_array("theta").max(),
+                self.coordinates.get_axis_array("theta"),
+                self.coordinates.get_axis_array("theta").max(),
             )
             if theta is not None:
                 kp = find_nearest(
-                    self.coords.get_axis_array("theta"), np.pi / 2 + theta
+                    self.coordinates.get_axis_array("theta"), np.pi / 2 + theta
                 )
                 km = find_nearest(
-                    self.coords.get_axis_array("theta"), np.pi / 2 - theta
+                    self.coordinates.get_axis_array("theta"), np.pi / 2 - theta
                 )
             ret_data = (
                 np.sum(
                     (
                         self.data
-                        * self.coords.get_axis_array_med("r")[:, None, None]
-                        * np.sin(self.coords.get_axis_array_med("theta")[None, :, None])
-                        * np.ediff1d(self.coords.get_axis_array("theta"))[None, :, None]
+                        * self.coordinates.get_axis_array_med("r")[:, None, None]
+                        * np.sin(
+                            self.coordinates.get_axis_array_med("theta")[None, :, None]
+                        )
+                        * np.ediff1d(self.coordinates.get_axis_array("theta"))[
+                            None, :, None
+                        ]
                     )[:, km : kp + 1, :],
                     axis=1,
                     dtype="float64",
@@ -589,16 +646,16 @@ class GasField:
             ).reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data.astype("float32", copy=False),
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def vertical_projection(self, z=None, *, operation_name=None) -> "GasField":
@@ -613,9 +670,11 @@ class GasField:
 
         imid = self.find_imid()
         if self.native_geometry is Geometry.CARTESIAN:
-            zarr = self.coords.get_axis_array(Axis.CARTESIAN_Z)
-            zmed = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             km = find_nearest(zmed, zarr.min())
             kp = find_nearest(zmed, zarr.max())
             if z is not None:
@@ -629,9 +688,11 @@ class GasField:
                 )
             ).reshape(self.shape[0], self.shape[1], 1)
         elif self.native_geometry is Geometry.POLAR:
-            zarr = self.coords.get_axis_array(Axis.CARTESIAN_Z)
-            zmed = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             km = find_nearest(zmed, zarr.min())
             kp = find_nearest(zmed, zarr.max())
             if z is not None:
@@ -653,16 +714,16 @@ class GasField:
             )
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data.astype("float32", copy=False),
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def vertical_at_midplane(self, *, operation_name=None) -> "GasField":
@@ -674,32 +735,36 @@ class GasField:
         imid = self.find_imid()
         if self.native_geometry is Geometry.CARTESIAN:
             # find_around looks around the 2 coords values that surround coordmed at imid
-            zmed = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             ret_data = self.data[:, :, imid].reshape(self.shape[0], self.shape[1], 1)
             # do geometry conversion!!! -> chainer la conversion (une fois que reduction de dimension -> conversion puis plot egalement chainable)
         elif self.native_geometry is Geometry.POLAR:
-            zmed = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             ret_data = self.data[:, :, imid].reshape(self.shape[0], self.shape[1], 1)
         elif self.native_geometry is Geometry.SPHERICAL:
-            thetamed = self.coords.get_axis_array_med(Axis.COLATITUDE)
-            ret_coords = self.coords.project_along(
+            thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
+            ret_coords = self.coordinates.project_along(
                 Axis.COLATITUDE, thetamed[imid].item()
             )
             ret_data = self.data[:, imid, :].reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def latitudinal_at_theta(self, theta=0.0, *, operation_name=None) -> "GasField":
@@ -716,8 +781,8 @@ class GasField:
             )
         if self.native_geometry is Geometry.POLAR:
             data_at_theta = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
-            zmed = self.coords.get_axis_array_med(Axis.CARTESIAN_Z)
-            R = self.coords.get_axis_array(Axis.CYLINDRICAL_RADIUS)
+            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+            R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
             for i in range(self.shape[0]):
                 iz0 = find_nearest(zmed, R[i] / np.tan(np.pi / 2 - theta))
                 if np.sign(theta) >= 0:
@@ -731,10 +796,12 @@ class GasField:
                     else:
                         data_at_theta[i, :] = np.nan
             ret_data = data_at_theta.reshape(self.shape[0], self.shape[1], 1)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
         elif self.native_geometry is Geometry.SPHERICAL:
-            thetamed = self.coords.get_axis_array_med(Axis.COLATITUDE)
-            ret_coords = self.coords.project_along(
+            thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
+            ret_coords = self.coordinates.project_along(
                 Axis.COLATITUDE, thetamed[imid].item()
             )
             ret_data = self.data[
@@ -742,16 +809,16 @@ class GasField:
             ].reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def vertical_at_z(self, z=0.0, *, operation_name=None) -> "GasField":
@@ -762,14 +829,18 @@ class GasField:
         )
         imid = self.find_imid(altitude=z)
         if self.native_geometry is Geometry.CARTESIAN:
-            zmed = self.coords.get_axis_array(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
                 self.shape[0], self.shape[1], 1
             )
         elif self.native_geometry is Geometry.POLAR:
-            zmed = self.coords.get_axis_array(Axis.CARTESIAN_Z)
-            ret_coords = self.coords.project_along(Axis.CARTESIAN_Z, zmed[imid].item())
+            zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+            ret_coords = self.coordinates.project_along(
+                Axis.CARTESIAN_Z, zmed[imid].item()
+            )
             ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
                 self.shape[0], self.shape[1], 1
             )
@@ -780,16 +851,16 @@ class GasField:
         else:
             assert_never(self.native_geometry)
 
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def azimuthal_at_phi(self, phi=0.0, *, operation_name=None) -> "GasField":
@@ -804,25 +875,29 @@ class GasField:
                 f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_at_phi"
             )
         elif self.native_geometry is Geometry.POLAR:
-            phimed = self.coords.get_axis_array(Axis.AZIMUTH)
-            ret_coords = self.coords.project_along(Axis.AZIMUTH, phimed[iphi].item())
+            phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
+            ret_coords = self.coordinates.project_along(
+                Axis.AZIMUTH, phimed[iphi].item()
+            )
             ret_data = self.data[:, iphi, :].reshape(self.shape[0], 1, self.shape[2])
         elif self.native_geometry is Geometry.SPHERICAL:
-            phimed = self.coords.get_axis_array(Axis.AZIMUTH)
-            ret_coords = self.coords.project_along(Axis.AZIMUTH, phimed[iphi].item())
+            phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
+            ret_coords = self.coordinates.project_along(
+                Axis.AZIMUTH, phimed[iphi].item()
+            )
             ret_data = self.data[:, :, iphi].reshape(self.shape[0], self.shape[1], 1)
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def azimuthal_at_planet(
@@ -845,16 +920,16 @@ class GasField:
 
         phip = self.find_phip(planet_file=planet_file)
         aziphip = self.azimuthal_at_phi(phi=phip)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             aziphip.data,
             aziphip.coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def azimuthal_average(self, *, operation_name=None) -> "GasField":
@@ -870,29 +945,33 @@ class GasField:
                 f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average"
             )
         elif self.native_geometry is Geometry.POLAR:
-            phimed = self.coords.get_axis_array_med(Axis.AZIMUTH)
-            ret_coords = self.coords.project_along(Axis.AZIMUTH, phimed[iphi].item())
+            phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
+            ret_coords = self.coordinates.project_along(
+                Axis.AZIMUTH, phimed[iphi].item()
+            )
             ret_data = np.nanmean(self.data, axis=1, dtype="float64").reshape(
                 self.shape[0], 1, self.shape[2]
             )
         elif self.native_geometry is Geometry.SPHERICAL:
-            phimed = self.coords.get_axis_array_med(Axis.AZIMUTH)
-            ret_coords = self.coords.project_along(Axis.AZIMUTH, phimed[iphi].item())
+            phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
+            ret_coords = self.coordinates.project_along(
+                Axis.AZIMUTH, phimed[iphi].item()
+            )
             ret_data = np.nanmean(self.data, axis=2, dtype="float64").reshape(
                 self.shape[0], self.shape[1], 1
             )
         else:
             assert_never(self.native_geometry)
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data.astype("float32", copy=False),
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def remove_planet_hill_band(
@@ -925,38 +1004,38 @@ class GasField:
         elif self.native_geometry is Geometry.POLAR:
             ret_coords = self.coords
             ret_data = self.data.copy()
-            if iphip_p >= iphip_m and iphip_p != self.coords.shape[1]:
+            if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[1]:
                 ret_data[:, iphip_m : iphip_p + 1, :] = np.nan
             else:
-                if iphip_p == self.coords.shape[1]:
+                if iphip_p == self.coordinates.shape[1]:
                     ret_data[:, iphip_m:iphip_p, :] = np.nan
                 else:
                     ret_data[:, 0 : iphip_p + 1, :] = np.nan
-                    ret_data[:, iphip_m : self.coords.shape[1], :] = np.nan
+                    ret_data[:, iphip_m : self.coordinates.shape[1], :] = np.nan
         elif self.native_geometry is Geometry.SPHERICAL:
             ret_coords = self.coords
             ret_data = self.data.copy()
-            if iphip_p >= iphip_m and iphip_p != self.coords.shape[2]:
+            if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[2]:
                 ret_data[:, :, iphip_m : iphip_p + 1] = np.nan
             else:
-                if iphip_p == self.coords.shape[2]:
+                if iphip_p == self.coordinates.shape[2]:
                     ret_data[:, :, iphip_m:iphip_p] = np.nan
                 else:
                     ret_data[:, :, 0 : iphip_p + 1] = np.nan
-                    ret_data[:, :, iphip_m : self.coords.shape[2]] = np.nan
+                    ret_data[:, :, iphip_m : self.coordinates.shape[2]] = np.nan
         else:
             assert_never(self.native_geometry)
 
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def radial_at_r(self, distance=1.0, *, operation_name=None) -> "GasField":
@@ -972,28 +1051,28 @@ class GasField:
                 f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
             )
         elif self.native_geometry is Geometry.POLAR:
-            rmed = self.coords.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
-            ret_coords = self.coords.project_along(
+            rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
+            ret_coords = self.coordinates.project_along(
                 Axis.CYLINDRICAL_RADIUS, rmed[ir1].item()
             )
         elif self.native_geometry is Geometry.SPHERICAL:
-            rmed = self.coords.get_axis_array_med(Axis.SPHERICAL_RADIUS)
-            ret_coords = self.coords.project_along(
+            rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
+            ret_coords = self.coordinates.project_along(
                 Axis.SPHERICAL_RADIUS, rmed[ir1].item()
             )
         else:
             assert_never(self.native_geometry)
         ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def radial_average_interval(
@@ -1018,23 +1097,23 @@ class GasField:
                 f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
             )
         elif self.native_geometry is Geometry.POLAR:
-            R = self.coords.get_axis_array(Axis.CYLINDRICAL_RADIUS)
+            R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
             if vmin is None:
                 vmin = R.min()
             if vmax is None:
                 vmax = R.max()
-            Rmed = self.coords.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
-            ret_coords = self.coords.project_along(
+            Rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
+            ret_coords = self.coordinates.project_along(
                 Axis.CYLINDRICAL_RADIUS, Rmed[ir].item()
             )
         elif self.native_geometry is Geometry.SPHERICAL:
-            r = self.coords.get_axis_array(Axis.SPHERICAL_RADIUS)
+            r = self.coordinates.get_axis_array(Axis.SPHERICAL_RADIUS)
             if vmin is None:
                 vmin = r.min()
             if vmax is None:
                 vmax = r.max()
-            rmed = self.coords.get_axis_array_med(Axis.SPHERICAL_RADIUS)
-            ret_coords = self.coords.project_along(
+            rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
+            ret_coords = self.coordinates.project_along(
                 Axis.SPHERICAL_RADIUS, rmed[ir].item()
             )
         else:
@@ -1043,43 +1122,42 @@ class GasField:
         ret_data = np.nanmean(
             self.data[irmin : irmax + 1, :, :], axis=0, dtype="float64"
         ).reshape(1, self.shape[1], self.shape[2])
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def diff(self, on_2) -> "GasField":
         ds_2 = GasDataSet(
             on_2,
             geometry=self.native_geometry,
-            inifile=self.inifile,
-            directory=self.directory,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
         )
         if self.operation != "":
             raise KeyError(
                 "For now, diff should only be applied on the initial Field cube."
             )
         # self.operation += "diff"
-        ret_data = (self.data - ds_2[self.field].data) / ds_2[self.field].data
-        ret_coords = self.coords
-        # self.field = r"$\frac{%s - %s_0}{%s_0}$" % (self.field, self.field, self.field)
-        return GasField(
-            self.field,
+        ret_data = (self.data - ds_2[self.name].data) / ds_2[self.name].data
+        ret_coords = self.coordinates
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             ret_coords,
             self.native_geometry,
-            self.on,
+            self.output_number,
             self.operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=self.rotate_by,
         )
 
     def rotate(
@@ -1093,15 +1171,19 @@ class GasField:
             rotate_by=rotate_by,
             rotate_with=rotate_with,
             planet_number_argument=("planet_corotation", planet_corotation),
-            planet_azimuth_finder=self,
+            planet_azimuth_finder=partial(
+                _find_planet_azimuth,
+                loader=self.loader,
+                output_number=self.output_number,
+            ),
             stacklevel=2,
         )
 
         operation = self.operation
         if self.shape.count(1) > 1:
             raise ValueError("data has to be 2D or 3D in order to rotate the data.")
-        if not _fequal(self._rotate_by, rotate_by):
-            phicoord = self.coords.get_axis_array(Axis.AZIMUTH) - rotate_by
+        if not _fequal(self.rotate_by, rotate_by):
+            phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
             ipi = find_nearest(phicoord, 0)
             if abs(0 - phicoord[ipi]) > abs(np.ediff1d(find_around(phicoord, 0))[0]):
                 ipi = find_nearest(phicoord, 2 * np.pi)
@@ -1114,20 +1196,19 @@ class GasField:
                 raise NotImplementedError(
                     f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
                 )
-            self._rotate_by = rotate_by
         else:
             ret_data = self.data
 
-        return GasField(
-            self.field,
+        return GasField._legacy_init(
+            self.name,
             ret_data,
             deepcopy(self.coords),
             self.native_geometry,
-            self.on,
+            self.output_number,
             operation,
-            inifile=self.inifile,
-            directory=self.directory,
-            rotate_by=self._rotate_by,
+            inifile=self.loader.parameter_file,
+            directory=self.loader.parameter_file.parent,
+            rotate_by=rotate_by,
         )
 
 
@@ -1229,7 +1310,7 @@ class GasDataSet:
             self._read.x3,
         )
         for key in self.dict:
-            self.dict[key] = GasField(
+            self.dict[key] = GasField._legacy_init(
                 key,
                 self.dict[key],
                 self.coords,

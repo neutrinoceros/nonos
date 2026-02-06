@@ -128,7 +128,7 @@ def test_nonoslick_method(method, tmp_path):
     with open(tmp_path / "idefix.ini", "wb") as fh:
         inifix.dump(data, fh)
 
-    Vx = GasField(
+    Vx = GasField._legacy_init(
         field="Vx",
         data=fake_Vx,
         coords=fake_coords,
@@ -137,7 +137,7 @@ def test_nonoslick_method(method, tmp_path):
         operation="",
         directory=tmp_path,
     )
-    Vy = GasField(
+    Vy = GasField._legacy_init(
         field="Vy",
         data=fake_Vy,
         coords=fake_coords,
@@ -146,7 +146,7 @@ def test_nonoslick_method(method, tmp_path):
         operation="",
         directory=tmp_path,
     )
-    F = GasField(
+    F = GasField._legacy_init(
         field="F",
         data=fake_F,
         coords=fake_coords,

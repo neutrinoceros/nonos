@@ -1213,7 +1213,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 
 [package.optional-dependencies]
@@ -1268,7 +1268,7 @@ requires-dist = [
     { name = "nonos-cli", marker = "extra == 'cli'", editable = "cli" },
     { name = "numpy", specifier = ">=1.21.2" },
     { name = "scipy", marker = "extra == 'all'", specifier = ">=1.7.2" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'", specifier = ">=4.4.0" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.5.0" },
 ]
 provides-extras = ["cli", "all"]
 
