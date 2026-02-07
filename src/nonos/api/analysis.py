@@ -473,7 +473,7 @@ class GasField:
                 with open(header_file, "w") as hfile:
                     json.dump(dictsaved, hfile, indent=2)
 
-        src = self.loader.parameter_file.resolve()
+        src = self.loader.parameter_file
         dest = directory / self.loader.parameter_file.name
         if dest != src:
             copyfile(src, dest)
