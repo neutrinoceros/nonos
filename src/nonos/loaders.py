@@ -6,10 +6,10 @@ __all__ = [
 ]
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import auto
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict, final
+from typing import TYPE_CHECKING, final
 
 import nonos._readers as readers
 from nonos._types import BinReader, IniReader, PlanetReader
@@ -130,7 +130,7 @@ def loader_from(
 
 
 def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader:
-    return Loader(parameter_file, **_ingredients_from(recipe))
+    return Loader(parameter_file, **asdict(Ingredients.from_recipe(recipe)))
 
 
 def _parameter_file_from(
@@ -176,39 +176,40 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
         )
 
 
-class Ingredients(TypedDict):
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Ingredients:
     binary_reader: type[BinReader]
     planet_reader: type[PlanetReader]
     ini_reader: type[IniReader]
 
-
-def _ingredients_from(recipe: Recipe, /) -> Ingredients:
-    if recipe is Recipe.IDEFIX_VTK:
-        return {
-            "binary_reader": readers.binary.VTKReader,
-            "planet_reader": readers.planet.IdefixReader,
-            "ini_reader": readers.ini.IdefixVTKReader,
-        }
-    elif recipe is Recipe.PLUTO_VTK:
-        return {
-            "binary_reader": readers.binary.VTKReader,
-            "planet_reader": readers.planet.NullReader,
-            "ini_reader": readers.ini.PlutoVTKReader,
-        }
-    elif recipe is Recipe.FARGO3D:
-        return {
-            "binary_reader": readers.binary.Fargo3DReader,
-            "planet_reader": readers.planet.Fargo3DReader,
-            "ini_reader": readers.ini.Fargo3DReader,
-        }
-    elif recipe is Recipe.FARGO_ADSG:
-        return {
-            "binary_reader": readers.binary.FargoADSGReader,
-            "planet_reader": readers.planet.FargoADSGReader,
-            "ini_reader": readers.ini.FargoADSGReader,
-        }
-    else:
-        assert_never(recipe)
+    @classmethod
+    def from_recipe(cls, recipe: Recipe, /) -> "Ingredients":
+        if recipe is Recipe.IDEFIX_VTK:
+            return Ingredients(
+                binary_reader=readers.binary.VTKReader,
+                planet_reader=readers.planet.IdefixReader,
+                ini_reader=readers.ini.IdefixVTKReader,
+            )
+        elif recipe is Recipe.PLUTO_VTK:
+            return Ingredients(
+                binary_reader=readers.binary.VTKReader,
+                planet_reader=readers.planet.NullReader,
+                ini_reader=readers.ini.PlutoVTKReader,
+            )
+        elif recipe is Recipe.FARGO3D:
+            return Ingredients(
+                binary_reader=readers.binary.Fargo3DReader,
+                planet_reader=readers.planet.Fargo3DReader,
+                ini_reader=readers.ini.Fargo3DReader,
+            )
+        elif recipe is Recipe.FARGO_ADSG:
+            return Ingredients(
+                binary_reader=readers.binary.FargoADSGReader,
+                planet_reader=readers.planet.FargoADSGReader,
+                ini_reader=readers.ini.FargoADSGReader,
+            )
+        else:
+            assert_never(recipe)
 
 
 def recipe_from(
