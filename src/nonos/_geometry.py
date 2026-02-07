@@ -248,7 +248,8 @@ def _native_plane_from_target_plane(
 def _deprecated_axis_array_property(attr: str, label: str, replacement: str):
     def _wrapped(self) -> FloatArray:
         warnings.warn(
-            f"Coordinates.{attr} is deprecated. "
+            f"Coordinates.{attr} is deprecated since v0.18.0 "
+            "and may be removed in a future version. "
             f"Instead, use Coordinates.{replacement}({label!r})",
             DeprecationWarning,
             stacklevel=2,
