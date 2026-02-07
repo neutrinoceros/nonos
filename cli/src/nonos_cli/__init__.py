@@ -24,7 +24,7 @@ import numpy as np
 from tqdm import tqdm
 
 from nonos.api import GasDataSet
-from nonos.api._angle_parsing import _parse_planet_file
+from nonos.api._angle_parsing import _resolve_planet_file
 from nonos.loaders import loader_from
 from nonos.styling import set_mpl_style
 from nonos_cli.config import DEFAULTS
@@ -566,7 +566,7 @@ def main(argv: list[str] | None = None) -> int:
     if not is_set(args["corotate"]):
         planet_file = None
     else:
-        planet_file = _parse_planet_file(planet_number=args["corotate"])
+        planet_file = _resolve_planet_file(planet_number=args["corotate"])
 
     # call of the process_field function, whether it be in parallel or not
     # TODO: reduce this to the bare minimum

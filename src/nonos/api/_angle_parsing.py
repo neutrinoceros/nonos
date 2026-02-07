@@ -1,13 +1,19 @@
+import sys
 import warnings
 from math import isclose
 from typing import Protocol
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 
 class PlanetAzimuthFinder(Protocol):
     def __call__(self, *, planet_file: str) -> float: ...
 
 
-def _parse_planet_file(
+def _resolve_planet_file(
     *,
     planet_file: str | None = None,
     planet_number: int | None = None,
@@ -23,7 +29,21 @@ def _parse_planet_file(
         return f"planet{planet_number or 0}.dat"
 
 
-def _parse_rotation_angle(
+@deprecated(
+    "_parse_planet_file is deprecated since v0.20.0 "
+    "and may be removed in a future version."
+    "Use _resolve_planet_file instead"
+)
+def _parse_planet_file(
+    *,
+    planet_file: str | None = None,
+    planet_number: int | None = None,
+) -> str:
+    # backward compatibility layer for nonos-cli
+    return _resolve_planet_file(planet_file=planet_file, planet_number=planet_number)
+
+
+def _resolve_rotate_by(
     *,
     rotate_by: float | None,
     rotate_with: str | None,
@@ -54,7 +74,7 @@ def _parse_rotation_angle(
             DeprecationWarning,
             stacklevel=stacklevel + 1,
         )
-        rotate_with = _parse_planet_file(planet_number=planet_number)
+        rotate_with = _resolve_planet_file(planet_number=planet_number)
 
     if rotate_with is not None:
         rotate_by = planet_azimuth_finder(planet_file=rotate_with)

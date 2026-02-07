@@ -25,8 +25,8 @@ from nonos._readers.binary import NPYReader
 from nonos._types import FloatArray, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
-    _parse_planet_file,
-    _parse_rotation_angle,
+    _resolve_planet_file,
+    _resolve_rotate_by,
 )
 from nonos.api.tools import find_around, find_nearest
 from nonos.loaders import Loader, Recipe, loader_from, recipe_from
@@ -235,7 +235,7 @@ class GasField:
             output_number=on,
             operation=operation,
             loader=loader,
-            rotate_by=_parse_rotation_angle(
+            rotate_by=_resolve_rotate_by(
                 rotate_by=rotate_by,
                 rotate_with=rotate_with,
                 planet_number_argument=("rotate_grid", None),
@@ -318,7 +318,7 @@ class GasField:
         rotate_with: str | None = None,
         planet_corotation: int | None = None,  # deprecated
     ) -> Plotable:
-        rotate_by = _parse_rotation_angle(
+        rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
             planet_number_argument=("planet_corotation", planet_corotation),
@@ -526,7 +526,7 @@ class GasField:
         planet_number: int | None = None,
         planet_file: str | None = None,
     ) -> PlanetData:
-        planet_file = _parse_planet_file(
+        planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
         file = self.loader.parameter_file.parent / planet_file
@@ -566,14 +566,14 @@ class GasField:
         return _find_planet_azimuth(
             self.loader,
             self.output_number,
-            planet_file=_parse_planet_file(
+            planet_file=_resolve_planet_file(
                 planet_file=planet_file,
                 planet_number=planet_number,
             ),
         )
 
     @staticmethod
-    def _parse_operation_name(
+    def _resolve_operation_name(
         *,
         prefix: str,
         default_suffix: str,
@@ -591,7 +591,7 @@ class GasField:
         default_suffix = "latitudinal_projection"
         if theta is not None:
             default_suffix += str(np.pi / 2 - theta)
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=default_suffix,
             operation_name=operation_name,
@@ -684,7 +684,7 @@ class GasField:
         default_suffix = "vertical_projection"
         if z is not None:
             default_suffix += str(z)
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=default_suffix,
             operation_name=operation_name,
@@ -744,7 +744,7 @@ class GasField:
         )
 
     def vertical_at_midplane(self, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="vertical_at_midplane",
             operation_name=operation_name,
@@ -780,7 +780,7 @@ class GasField:
         )
 
     def latitudinal_at_theta(self, theta=0.0, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
             operation_name=operation_name,
@@ -829,7 +829,7 @@ class GasField:
         )
 
     def vertical_at_z(self, z=0.0, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"vertical_at_z{z}",
             operation_name=operation_name,
@@ -865,7 +865,7 @@ class GasField:
         )
 
     def azimuthal_at_phi(self, phi=0.0, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"azimuthal_at_phi{phi}",
             operation_name=operation_name,
@@ -903,12 +903,12 @@ class GasField:
         planet_file: str | None = None,
         operation_name=None,
     ) -> "GasField":
-        planet_file = _parse_planet_file(
+        planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
         del planet_number
 
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="azimuthal_at_planet",
             operation_name=operation_name,
@@ -919,7 +919,7 @@ class GasField:
         return aziphip.replace(operation=operation)
 
     def azimuthal_average(self, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="azimuthal_average",
             operation_name=operation_name,
@@ -962,12 +962,12 @@ class GasField:
         planet_file: str | None = None,
         operation_name=None,
     ) -> "GasField":
-        planet_file = _parse_planet_file(
+        planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
         del planet_number
 
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="remove_planet_hill_band",
             operation_name=operation_name,
@@ -1014,7 +1014,7 @@ class GasField:
         )
 
     def radial_at_r(self, distance=1.0, *, operation_name=None) -> "GasField":
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"radial_at_r{distance}",
             operation_name=operation_name,
@@ -1053,7 +1053,7 @@ class GasField:
                 f"The radial interval {vmin=} and {vmax=} should be defined"
             )
 
-        operation = self._parse_operation_name(
+        operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"radial_average_interval_{vmin}_{vmax}",
             operation_name=operation_name,
@@ -1119,7 +1119,7 @@ class GasField:
         rotate_with: str | None = None,
         rotate_by: float | None = None,
     ) -> "GasField":
-        rotate_by = _parse_rotation_angle(
+        rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
             planet_number_argument=("planet_corotation", planet_corotation),
