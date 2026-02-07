@@ -81,13 +81,17 @@ def test_compute_from_data(test_data_dir):
         )
 
     datane = ne.evaluate("rhovp*vx2vp")
-    rhovx2_compute = compute(
-        field="RHOVX2",
-        data=datane,
-        ref=rhovpfield,
-    )
+    with pytest.deprecated_call():
+        rhovx2_compute = compute(
+            field="RHOVX2",
+            data=datane,
+            ref=rhovpfield,
+        )
 
     npt.assert_array_equal(rhovx2_from_data.data, rhovx2_compute.data)
+
+    rhovx2_replace = ds["RHO"].replace(name="RHOVX2", data=datane)
+    npt.assert_array_equal(rhovx2_compute.data, rhovx2_replace.data)
 
 
 def test_corotation_api_float(test_data_dir):
