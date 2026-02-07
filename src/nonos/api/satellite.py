@@ -185,7 +185,7 @@ class NonosLick:
 
 @deprecated(
     "nonos.api.satellite.compute is deprecated since v0.20.0 "
-    "and will be removed in a future version. "
+    "and may be removed in a future version. "
     "Use GasField.replace instead."
 )
 def compute(
@@ -198,7 +198,7 @@ def compute(
 
 @deprecated(
     "nonos.api.satellite.from_data is deprecated since v0.11.0"
-    "and will be removed in a future version. "
+    "and may be removed in a future version. "
     "Use GasField.replace instead."
 )
 def from_data(
