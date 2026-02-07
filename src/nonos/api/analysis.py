@@ -250,27 +250,47 @@ class GasField:
         )
 
     @property
-    @deprecated("Use GasField.name instead")
+    @deprecated(
+        "GasField.field is deprecated since v0.20.0, "
+        "and will be removed in a future version. "
+        "Use GasField.name instead"
+    )
     def field(self) -> str:
         return self.name
 
     @property
-    @deprecated("Use GasField.loader.parameter_file instead")
+    @deprecated(
+        "GasField.inifile  is deprecated since v0.20.0, "
+        "and will be removed in a future version. "
+        "Use GasField.loader.parameter_file instead"
+    )
     def inifile(self) -> Path:
         return self.loader.parameter_file
 
     @property
-    @deprecated("Use GasField.coordinates instead")
+    @deprecated(
+        "GasField.coords is deprecated since v0.20.0, "
+        "and will be removed in a future version. "
+        "Use GasField.coordinates instead"
+    )
     def coords(self) -> Coordinates:
         return self.coordinates
 
     @property
-    @deprecated("Use GasField.output_number instead")
+    @deprecated(
+        "GasField.on is deprecated since v0.20.0, "
+        "and will be removed in a future version. "
+        "Use GasField.output_number instead"
+    )
     def on(self) -> int:
         return self.output_number
 
     @property
-    @deprecated("Use GasField.loader.parameter_file.parent instead")
+    @deprecated(
+        "GasField.directory is deprecated since v0.20.0, "
+        "and will be removed in a future version. "
+        "Use GasField.loader.parameter_file.parent instead"
+    )
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
