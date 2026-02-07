@@ -4,7 +4,32 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from nonos.api import GasDataSet, file_analysis
+from nonos._geometry import Coordinates, Geometry
+from nonos.api import GasDataSet, GasField, file_analysis
+from nonos.loaders import loader_from
+
+
+def test_gasfield_immutable_data(test_data_dir):
+    arr = np.eye(8)
+    field = GasField(
+        name="test",
+        data=arr,
+        coordinates=Coordinates(
+            geometry=Geometry.CARTESIAN,
+            x1=np.linspace(0, 1, 8),
+            x2=np.linspace(0, 1, 8),
+            x3=np.linspace(0, 1, 8),
+        ),
+        native_geometry=Geometry.CARTESIAN,
+        output_number=0,
+        loader=loader_from(
+            directory=test_data_dir / "idefix_planet3d",
+        ),
+    )
+    npt.assert_array_equal(field.data, arr)
+    assert field.data is not arr
+    with pytest.raises(ValueError, match=r"read-only$"):
+        field.data.flat[0] = np.nan
 
 
 class TestFileAnalysis:

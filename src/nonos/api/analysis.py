@@ -202,9 +202,13 @@ class GasField:
     coordinates: Coordinates
     native_geometry: Geometry
     output_number: int
-    operation: str
     loader: Loader
-    rotate_by: float
+    operation: str = ""
+    rotate_by: float = 0.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "data", self.data.view())
+        self.data.flags.writeable = False
 
     @classmethod
     def _legacy_init(
