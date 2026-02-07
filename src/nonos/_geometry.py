@@ -7,7 +7,6 @@ __all__ = [
     "axes_from_geometry",
 ]
 import sys
-import warnings
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import final, overload
@@ -23,6 +22,10 @@ else:
     from typing_extensions import assert_never
 
     from nonos._backports import StrEnum
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 
 class Geometry(StrEnum):
@@ -243,25 +246,6 @@ def _native_plane_from_target_plane(
         f"Transformation from {native_geometry} to ({axis_2}, {axis_1}) "
         "is not implemented"
     )
-
-
-def _deprecated_axis_array_property(attr: str, label: str, replacement: str):
-    def _wrapped(self) -> FloatArray:
-        warnings.warn(
-            f"Coordinates.{attr} is deprecated since v0.18.0 "
-            "and may be removed in a future version. "
-            f"Instead, use Coordinates.{replacement}({label!r})",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        try:
-            return getattr(self, replacement)(label)
-        except KeyError:
-            raise AttributeError(
-                f"Coordinates object has no attribute {attr}"
-            ) from None
-
-    return property(_wrapped)
 
 
 @final
@@ -493,20 +477,144 @@ class Coordinates:
         else:
             assert_never(self.geometry)
 
-    x = _deprecated_axis_array_property("x", "x", "get_axis_array")
-    y = _deprecated_axis_array_property("y", "y", "get_axis_array")
-    z = _deprecated_axis_array_property("z", "z", "get_axis_array")
-    r = _deprecated_axis_array_property("r", "r", "get_axis_array")
-    theta = _deprecated_axis_array_property("theta", "theta", "get_axis_array")
-    phi = _deprecated_axis_array_property("phi", "phi", "get_axis_array")
-    R = _deprecated_axis_array_property("R", "R", "get_axis_array")
+    def _safe_get_axis_array(self, attr) -> FloatArray:
+        try:
+            return self.get_axis_array(attr)
+        except KeyError:
+            raise AttributeError(
+                f"Coordinates object has no attribute {attr}"
+            ) from None
 
-    xmed = _deprecated_axis_array_property("xmed", "x", "get_axis_array_med")
-    ymed = _deprecated_axis_array_property("ymed", "y", "get_axis_array_med")
-    zmed = _deprecated_axis_array_property("zmed", "z", "get_axis_array_med")
-    rmed = _deprecated_axis_array_property("rmed", "r", "get_axis_array_med")
-    thetamed = _deprecated_axis_array_property(
-        "thetamed", "theta", "get_axis_array_med"
+    def _safe_get_axis_array_med(self, attr) -> FloatArray:
+        try:
+            return self.get_axis_array_med(attr)
+        except KeyError:
+            raise AttributeError(
+                f"Coordinates object has no attribute {attr}"
+            ) from None
+
+    @property
+    @deprecated(
+        "Coordinates.x is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('x')"
     )
-    phimed = _deprecated_axis_array_property("phimed", "phi", "get_axis_array_med")
-    Rmed = _deprecated_axis_array_property("Rmed", "R", "get_axis_array_med")
+    def x(self) -> FloatArray:
+        return self._safe_get_axis_array("x")
+
+    @property
+    @deprecated(
+        "Coordinates.y is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('y')"
+    )
+    def y(self) -> FloatArray:
+        return self._safe_get_axis_array("y")
+
+    @property
+    @deprecated(
+        "Coordinates.z is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('z')"
+    )
+    def z(self) -> FloatArray:
+        return self._safe_get_axis_array("z")
+
+    @property
+    @deprecated(
+        "Coordinates.r is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('r')"
+    )
+    def r(self) -> FloatArray:
+        return self._safe_get_axis_array("r")
+
+    @property
+    @deprecated(
+        "Coordinates.theta is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('theta')"
+    )
+    def theta(self) -> FloatArray:
+        return self._safe_get_axis_array("theta")
+
+    @property
+    @deprecated(
+        "Coordinates.phi is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('phi')"
+    )
+    def phi(self) -> FloatArray:
+        return self._safe_get_axis_array("phi")
+
+    @property
+    @deprecated(
+        "Coordinates.R is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array('R')"
+    )
+    def R(self) -> FloatArray:
+        return self._safe_get_axis_array("R")
+
+    @property
+    @deprecated(
+        "Coordinates.xmed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('x')"
+    )
+    def xmed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("x")
+
+    @property
+    @deprecated(
+        "Coordinates.ymed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('y')"
+    )
+    def ymed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("y")
+
+    @property
+    @deprecated(
+        "Coordinates.zmed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('z')"
+    )
+    def zmed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("z")
+
+    @property
+    @deprecated(
+        "Coordinates.rmed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('r')"
+    )
+    def rmed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("r")
+
+    @property
+    @deprecated(
+        "Coordinates.thetamed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('theta')"
+    )
+    def thetamed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("theta")
+
+    @property
+    @deprecated(
+        "Coordinates.phimed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('phi')"
+    )
+    def phimed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("phi")
+
+    @property
+    @deprecated(
+        "Coordinates.Rmed is deprecated since v0.18.0 "
+        "and may be removed in a future version. "
+        "Instead, use Coordinates.get_axis_array_med('R')"
+    )
+    def Rmed(self) -> FloatArray:
+        return self._safe_get_axis_array_med("R")
