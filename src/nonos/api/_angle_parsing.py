@@ -47,8 +47,9 @@ def _parse_rotation_angle(
     # let's funnel it down to a rotate_by form
     if planet_number is not None:
         warnings.warn(
-            f"The {planet_number_argname} argument is deprecated and will be removed "
-            "in a future version. Instead, please use either rotate_by (float) "
+            f"The {planet_number_argname} argument is deprecated since v0.11.0 "
+            "and may be removed in a future version. "
+            "Instead, please use either rotate_by (float) "
             "or rotate_with (str path to planet log file).",
             DeprecationWarning,
             stacklevel=stacklevel + 1,
