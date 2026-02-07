@@ -63,15 +63,6 @@ class TestGasDataSetFromNpy:
         )
         assert sorted(ds.keys()) == self.expected_keys
 
-    def test_deprecation(self, test_data_dir):
-        with pytest.deprecated_call():
-            ds = GasDataSet.from_npy(
-                *self.args,
-                **self.kwargs,
-                directory=test_data_dir / self.directory,
-            )
-        assert sorted(ds.keys()) == self.expected_keys
-
 
 def test_find_rhill(test_data_dir):
     ds = GasDataSet(23, directory=test_data_dir / "idefix_newvtk_planet2d")

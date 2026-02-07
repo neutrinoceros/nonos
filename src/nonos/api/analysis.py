@@ -1278,31 +1278,6 @@ class GasDataSet:
     def native_geometry(self) -> Geometry:
         return self._native_geometry
 
-    @classmethod
-    def from_npy(
-        cls,
-        on: int,
-        *,
-        inifile: os.PathLike[str] | None = None,
-        code: str | Recipe | None = None,
-        directory: os.PathLike[str] | None = None,
-        operation: str,
-    ) -> "GasDataSet":
-        warnings.warn(
-            "GasDataSet.from_npy is deprecated "
-            "and will be removed in a future version. "
-            "Instead, call GasDataSet(...) directly.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return GasDataSet(
-            on,
-            inifile=inifile,
-            code=code,
-            directory=directory,
-            operation=operation,
-        )
-
     def __getitem__(self, key) -> "GasField":
         if key in self.dict:
             return self.dict[key]
