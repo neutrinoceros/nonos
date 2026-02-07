@@ -205,7 +205,7 @@ class GasField:
     output_number: int
     operation: str
     loader: Loader
-    rotate_by: float = 0.0
+    rotate_by: float
 
     @classmethod
     def _legacy_init(
