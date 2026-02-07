@@ -1234,10 +1234,12 @@ class GasDataSet:
         else:
             self._loader = loader
 
-        self.on, datafile = self._loader.binary_reader.parse_output_number_and_filename(
-            input_dataset,
-            directory=directory,
-            prefix=operation or "",
+        self.output_number, datafile = (
+            self._loader.binary_reader.parse_output_number_and_filename(
+                input_dataset,
+                directory=directory,
+                prefix=operation or "",
+            )
         )
 
         self._read = self._loader.load_bin_data(
@@ -1248,7 +1250,7 @@ class GasDataSet:
 
         self._native_geometry = self._read.geometry
         self.dict = self._read.data
-        self.coords = Coordinates(
+        self.coordinates = Coordinates(
             self.native_geometry,
             self._read.x1,
             self._read.x2,
@@ -1258,9 +1260,9 @@ class GasDataSet:
             self.dict[key] = GasField._legacy_init(
                 key,
                 self.dict[key],
-                self.coords,
+                self.coordinates,
                 self.native_geometry,
-                self.on,
+                self.output_number,
                 operation="",
                 inifile=self._loader.parameter_file,
                 code=recipe,
@@ -1277,6 +1279,24 @@ class GasDataSet:
     @property
     def native_geometry(self) -> Geometry:
         return self._native_geometry
+
+    @property
+    @deprecated(
+        "GasDataSet.on is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasDataSet.output_number instead"
+    )
+    def on(self) -> int:
+        return self.output_number
+
+    @property
+    @deprecated(
+        "GasDataSet.coords is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasDataSet.coordinates instead"
+    )
+    def coords(self) -> Coordinates:
+        return self.coordinates
 
     def __getitem__(self, key) -> "GasField":
         if key in self.dict:
