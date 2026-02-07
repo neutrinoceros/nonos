@@ -1,5 +1,5 @@
 import os
-import warnings
+import sys
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
@@ -9,6 +9,11 @@ import numpy as np
 from nonos._geometry import Coordinates
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -178,27 +183,24 @@ class NonosLick:
         return im
 
 
+@deprecated(
+    "nonos.api.satellite.compute is deprecated since v0.20.0 "
+    "and will be removed in a future version. "
+    "Use GasField.replace instead."
+)
 def compute(
     field: str,
     data: np.ndarray,
     ref: GasField,
-):
-    ret_data = data
-    ret_coords = ref.coordinates
-    geometry = ret_coords.geometry
-    return GasField._legacy_init(
-        field,
-        ret_data,
-        ret_coords,
-        geometry,
-        ref.output_number,
-        operation=ref.operation,
-        inifile=ref.loader.parameter_file,
-        directory=ref.loader.parameter_file.parent,
-        rotate_by=ref.rotate_by,
-    )
+) -> GasField:
+    return ref.replace(name=field, data=data)
 
 
+@deprecated(
+    "nonos.api.satellite.from_data is deprecated since v0.11.0"
+    "and will be removed in a future version. "
+    "Use GasField.replace instead."
+)
 def from_data(
     *,
     field: str,
@@ -210,12 +212,6 @@ def from_data(
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
 ):  # pragma: no cover
-    warnings.warn(
-        "nonos.api.satellite.from_data is deprecated and will be removed "
-        "in a future version. Please use nonos.api.satellite.compute instead",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
     ret_data = data
     ret_coords = coords
     geometry = coords.geometry

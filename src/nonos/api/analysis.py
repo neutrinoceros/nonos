@@ -274,6 +274,14 @@ class GasField:
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
+    def replace(self, **substitutions) -> "GasField":
+        """Convenience wrapper around copy.replace"""
+        if sys.version_info >= (3, 13):
+            from copy import replace
+        else:
+            from dataclasses import replace
+        return replace(self, **substitutions)
+
     @property
     def shape(self) -> tuple[int, int, int]:
         """
