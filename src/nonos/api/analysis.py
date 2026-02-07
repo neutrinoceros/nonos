@@ -983,7 +983,7 @@ class GasField:
                 f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average_except_planet_hill"
             )
         elif self.native_geometry is Geometry.POLAR:
-            ret_coords = self.coords
+            ret_coords = self.coordinates
             ret_data = self.data.copy()
             if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[1]:
                 ret_data[:, iphip_m : iphip_p + 1, :] = np.nan
@@ -994,7 +994,7 @@ class GasField:
                     ret_data[:, 0 : iphip_p + 1, :] = np.nan
                     ret_data[:, iphip_m : self.coordinates.shape[1], :] = np.nan
         elif self.native_geometry is Geometry.SPHERICAL:
-            ret_coords = self.coords
+            ret_coords = self.coordinates
             ret_data = self.data.copy()
             if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[2]:
                 ret_data[:, :, iphip_m : iphip_p + 1] = np.nan
