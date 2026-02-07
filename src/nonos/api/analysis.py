@@ -5,7 +5,6 @@ import sys
 import warnings
 from collections import deque
 from collections.abc import ItemsView, KeysView, ValuesView
-from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -674,16 +673,11 @@ class GasField:
             ).reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data.astype("float32", copy=False),
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def vertical_projection(self, z=None, *, operation_name=None) -> "GasField":
@@ -742,16 +736,11 @@ class GasField:
             )
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data.astype("float32", copy=False),
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def vertical_at_midplane(self, *, operation_name=None) -> "GasField":
@@ -783,16 +772,11 @@ class GasField:
             ret_data = self.data[:, imid, :].reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def latitudinal_at_theta(self, theta=0.0, *, operation_name=None) -> "GasField":
@@ -837,16 +821,11 @@ class GasField:
             ].reshape(self.shape[0], 1, self.shape[2])
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def vertical_at_z(self, z=0.0, *, operation_name=None) -> "GasField":
@@ -879,16 +858,10 @@ class GasField:
         else:
             assert_never(self.native_geometry)
 
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def azimuthal_at_phi(self, phi=0.0, *, operation_name=None) -> "GasField":
@@ -916,16 +889,11 @@ class GasField:
             ret_data = self.data[:, :, iphi].reshape(self.shape[0], self.shape[1], 1)
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def azimuthal_at_planet(
@@ -948,17 +916,7 @@ class GasField:
 
         phip = self.find_phip(planet_file=planet_file)
         aziphip = self.azimuthal_at_phi(phi=phip)
-        return GasField._legacy_init(
-            self.name,
-            aziphip.data,
-            aziphip.coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
-        )
+        return aziphip.replace(operation=operation)
 
     def azimuthal_average(self, *, operation_name=None) -> "GasField":
         operation = self._parse_operation_name(
@@ -990,16 +948,11 @@ class GasField:
             )
         else:
             assert_never(self.native_geometry)
-        return GasField._legacy_init(
-            self.name,
-            ret_data.astype("float32", copy=False),
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def remove_planet_hill_band(
@@ -1054,16 +1007,10 @@ class GasField:
         else:
             assert_never(self.native_geometry)
 
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def radial_at_r(self, distance=1.0, *, operation_name=None) -> "GasField":
@@ -1090,17 +1037,12 @@ class GasField:
             )
         else:
             assert_never(self.native_geometry)
+
         ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def radial_average_interval(
@@ -1150,16 +1092,10 @@ class GasField:
         ret_data = np.nanmean(
             self.data[irmin : irmax + 1, :, :], axis=0, dtype="float64"
         ).reshape(1, self.shape[1], self.shape[2])
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            coordinates=ret_coords,
+            operation=operation,
         )
 
     def diff(self, on_2) -> "GasField":
@@ -1173,20 +1109,8 @@ class GasField:
             raise KeyError(
                 "For now, diff should only be applied on the initial Field cube."
             )
-        # self.operation += "diff"
         ret_data = (self.data - ds_2[self.name].data) / ds_2[self.name].data
-        ret_coords = self.coordinates
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            ret_coords,
-            self.native_geometry,
-            self.output_number,
-            self.operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=self.rotate_by,
-        )
+        return self.replace(data=ret_data.astype("float32", copy=False))
 
     def rotate(
         self,
@@ -1227,16 +1151,9 @@ class GasField:
         else:
             ret_data = self.data
 
-        return GasField._legacy_init(
-            self.name,
-            ret_data,
-            deepcopy(self.coords),
-            self.native_geometry,
-            self.output_number,
-            operation,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
-            rotate_by=rotate_by,
+        return self.replace(
+            data=ret_data.astype("float32", copy=False),
+            operation=operation,
         )
 
 
