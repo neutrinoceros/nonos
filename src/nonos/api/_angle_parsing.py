@@ -31,7 +31,7 @@ def _resolve_planet_file(
 
 @deprecated(
     "_parse_planet_file is deprecated since v0.20.0 "
-    "and may be removed in a future version."
+    "and may be removed in a future version. "
     "Use _resolve_planet_file instead"
 )
 def _parse_planet_file(

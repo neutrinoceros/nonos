@@ -197,7 +197,7 @@ def compute(
 
 
 @deprecated(
-    "nonos.api.satellite.from_data is deprecated since v0.11.0"
+    "nonos.api.satellite.from_data is deprecated since v0.11.0 "
     "and may be removed in a future version. "
     "Use GasField.replace instead."
 )
