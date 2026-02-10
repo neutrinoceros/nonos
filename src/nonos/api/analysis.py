@@ -609,12 +609,15 @@ class GasField:
         elif self.native_geometry is Geometry.POLAR:
             ret_coords = Coordinates(
                 self.native_geometry,
-                self.coordinates.R,
+                self.coordinates.get_axis_array("R"),
                 self.coordinates.get_axis_array("phi"),
-                find_around(self.coordinates.z, self.coordinates.zmed[imid]),
+                find_around(
+                    self.coordinates.get_axis_array("z"),
+                    self.coordinates.get_axis_array_med("z")[imid],
+                ),
             )
-            R = self.coordinates.Rmed
-            z = self.coordinates.zmed
+            R = self.coordinates.get_axis_array_med("R")
+            z = self.coordinates.get_axis_array_med("z")
             integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
             # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
             for i in range(self.shape[0]):
@@ -624,9 +627,10 @@ class GasField:
                     km = find_nearest(z, -R[i] * theta)
                     kp = find_nearest(z, R[i] * theta)
                 integral[i, :] = np.sum(
-                    (self.data[i, :, :] * np.ediff1d(self.coordinates.z)[None, :])[
-                        :, km : kp + 1
-                    ],
+                    (
+                        self.data[i, :, :]
+                        * np.ediff1d(self.coordinates.get_axis_array("z"))[None, :]
+                    )[:, km : kp + 1],
                     axis=1,
                     dtype="float64",
                 )
