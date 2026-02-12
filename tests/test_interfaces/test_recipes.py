@@ -6,6 +6,7 @@ and integration tests.
 """
 
 from contextlib import nullcontext
+from types import GenericAlias
 from typing import Any
 
 import pytest
@@ -23,8 +24,8 @@ def validate_dataclass_instance(instance, cls):
         # that are expected at initialization
         attrs = cls.__slots__
     for key in attrs:
-        if isinstance(expected_type := cls.__annotations__[key], str):
-            # skip unresolved annotations
+        if isinstance(expected_type := cls.__annotations__[key], str | GenericAlias):
+            # skip unresolved annotations and generics
             continue
         obj = getattr(instance, key)
         if key in ("data", "meta"):
