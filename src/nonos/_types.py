@@ -95,10 +95,10 @@ class BinData:
 
 @final
 @dataclass(frozen=True, eq=False, slots=True)
-class OrbitalElements:
-    i: FloatArray
-    e: FloatArray
-    a: FloatArray
+class OrbitalElements(Generic[F]):
+    i: FArray1D[F]
+    e: FArray1D[F]
+    a: FArray1D[F]
 
 
 @final
