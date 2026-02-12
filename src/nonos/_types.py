@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar, final
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeAlias, TypeVar, final
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
@@ -103,7 +103,7 @@ class OrbitalElements:
 
 @final
 @dataclass(frozen=True, eq=False)
-class PlanetData:
+class PlanetData(Generic[F]):
     # fields that are required at __init__
     _init_attrs = ["x", "y", "z", "vx", "vy", "vz", "q", "t", "dt"]
     # additional derived field that can be computed on the fly
@@ -111,21 +111,21 @@ class PlanetData:
     __slots__ = _init_attrs + _post_init_attrs
 
     # cartesian position
-    x: FloatArray
-    y: FloatArray
-    z: FloatArray
+    x: FArray1D[F]
+    y: FArray1D[F]
+    z: FArray1D[F]
 
     # cartesian velocity
-    vx: FloatArray
-    vy: FloatArray
-    vz: FloatArray
+    vx: FArray1D[F]
+    vy: FArray1D[F]
+    vz: FArray1D[F]
 
     # mass ratio (or mass in units of the central star's)
-    q: FloatArray
+    q: FArray1D[F]
 
     # time and timestep
-    t: FloatArray
-    dt: FloatArray
+    t: FArray1D[F]
+    dt: FArray1D[F]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "d", np.sqrt(self.x**2 + self.y**2 + self.z**2))
@@ -159,13 +159,13 @@ class PlanetData:
         else:
             assert_never(frame)
 
-    def get_rotational_rate(self) -> FloatArray:
+    def get_rotational_rate(self) -> FArray1D[F]:
         d = self.d  # type: ignore [attr-defined]
         return np.sqrt((1.0 + self.q) / pow(d, 3.0))
 
 
 for key in PlanetData._post_init_attrs:
-    PlanetData.__annotations__[key] = FloatArray
+    PlanetData.__annotations__[key] = FArray1D
 
 
 @final
