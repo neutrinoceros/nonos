@@ -10,7 +10,6 @@ __all__ = [
     "FArray1D",
     "FArray2D",
     "FArray3D",
-    "FloatArray",  # to be replaced by FArray
     "FrameType",
     "IniData",
     "IniReader",
@@ -45,7 +44,6 @@ D3: TypeAlias = tuple[int, int, int]
 
 D = TypeVar("D", D1, D2, D3)
 F = TypeVar("F", f32, f64)
-FloatArray: TypeAlias = np.ndarray[Any, np.dtype[F]]
 
 FArray: TypeAlias = np.ndarray[D, np.dtype[F]]
 FArray1D: TypeAlias = FArray[D1, F]
