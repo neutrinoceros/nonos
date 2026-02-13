@@ -1,13 +1,15 @@
 import os
 import sys
+from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 import numpy as np
+from packaging.version import Version
 
 from nonos._geometry import Coordinates
-from nonos._types import D2, F, FArray2D
+from nonos._types import D2, F, FArray2D, StrDict
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -94,7 +96,22 @@ class NonosLick:
                 "NonosLick cannot be instantiated because lick is not installed"
             )
 
-        from lick.lick import lick_box
+        lick_box_kwargs: StrDict
+        if Version(version("lick")) >= Version("0.10.0dev0"):
+            from lick import lick_box
+
+            lick_box_kwargs = {
+                "kernel": np.sin(np.linspace(0, np.pi, kernel_length, endpoint=False)),
+                "post_lic": "north-west-light-source" if light_source else None,
+                "indexing": "xy",
+            }
+        else:
+            from lick.lick import lick_box  # type: ignore[no-redef]
+
+            lick_box_kwargs = {
+                "kernel_length": kernel_length,
+                "light_source": light_source,
+            }
 
         self.xmin = xmin
         self.xmax = xmax
@@ -120,10 +137,9 @@ class NonosLick:
             ymax=self.ymax,
             size_interpolated=size_interpolated,
             niter_lic=niter_lic,
-            kernel_length=kernel_length,
             method=method,
             method_background=method_background,
-            light_source=light_source,
+            **lick_box_kwargs,
         )
 
     def plot(
