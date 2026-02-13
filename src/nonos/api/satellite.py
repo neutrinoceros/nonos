@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 import numpy as np
 
 from nonos._geometry import Coordinates
-from nonos._types import F, FArray2D
+from nonos._types import D2, F, FArray2D
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -74,9 +74,9 @@ class NonosLick:
         self,
         x: FArray2D[F],
         y: FArray2D[F],
-        lx: GasField,
-        ly: GasField,
-        field: GasField,
+        lx: GasField[D2, F],
+        ly: GasField[D2, F],
+        field: GasField[D2, F],
         *,
         xmin: float | None = None,
         xmax: float | None = None,
@@ -102,6 +102,12 @@ class NonosLick:
         self.ymax = ymax
 
         # (x,y) are 2D meshgrids at cell centers
+        self.X: FArray2D[F]
+        self.Y: FArray2D[F]
+        self.LINE1: FArray2D[F]
+        self.LINE2: FArray2D[F]
+        self.F: FArray2D[F]
+        self.lick: FArray2D[F]
         self.X, self.Y, self.LINE1, self.LINE2, self.F, self.lick = lick_box(
             x,
             y,
