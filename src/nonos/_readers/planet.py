@@ -24,7 +24,7 @@ class NullReader(Generic[F]):
         )
 
     @staticmethod
-    def read(file: os.PathLike[str], /) -> PlanetData:
+    def read(file: os.PathLike[str], /) -> PlanetData[F]:
         raise NotImplementedError(
             f"{file} couldn't be read. The default reader class (NullReader) "
             "was previously selected, possibly by mistake ?"

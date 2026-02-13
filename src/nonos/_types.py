@@ -194,12 +194,12 @@ class BinReader(Protocol):
     def read(file: os.PathLike[str], /, **meta) -> BinData: ...
 
 
-class PlanetReader(Protocol):
+class PlanetReader(Protocol, Generic[F]):
     @staticmethod
     def get_planet_files(directory: Path, /) -> list[Path]: ...
 
     @staticmethod
-    def read(file: os.PathLike[str], /) -> PlanetData: ...
+    def read(file: os.PathLike[str], /) -> PlanetData[F]: ...
 
 
 class IniReader(Protocol):
