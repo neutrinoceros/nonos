@@ -3,7 +3,7 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
 
 import numpy as np
 from packaging.version import Version
@@ -71,7 +71,7 @@ def file_analysis(
 InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]
 
 
-class NonosLick:
+class NonosLick(Generic[F]):
     def __init__(
         self,
         x: FArray2D[F],
