@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 import numpy as np
 
 from nonos._geometry import Coordinates
+from nonos._types import F, FArray2D
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -19,8 +20,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from nonos._types import FloatArray
-
 
 def file_analysis(
     filename: os.PathLike[str],
@@ -29,7 +28,7 @@ def file_analysis(
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
     norb: int | None = None,
-) -> "FloatArray":
+) -> "FArray2D":
     if directory is None:
         directory = Path.cwd()
     else:
@@ -73,8 +72,8 @@ InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]
 class NonosLick:
     def __init__(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
+        x: FArray2D[F],
+        y: FArray2D[F],
         lx: GasField,
         ly: GasField,
         field: GasField,
