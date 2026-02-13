@@ -9,11 +9,11 @@ __all__ = [
 import sys
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import final, overload
+from typing import Generic, cast, final, overload
 
 import numpy as np
 
-from nonos._types import FloatArray, StrDict
+from nonos._types import F, FArray1D, StrDict
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -250,11 +250,11 @@ def _native_plane_from_target_plane(
 
 @final
 @dataclass(frozen=True, eq=False, slots=True)
-class Coordinates:
+class Coordinates(Generic[F]):
     geometry: Geometry
-    x1: FloatArray
-    x2: FloatArray
-    x3: FloatArray
+    x1: FArray1D[F]
+    x2: FArray1D[F]
+    x3: FArray1D[F]
 
     def __post_init__(self) -> None:
         if isinstance(self.geometry, str):
@@ -288,7 +288,7 @@ class Coordinates:
             raise ValueError(f"axis {axis} isn't native to {self.geometry} geometry")
         return axes.index(axis)
 
-    def get_axis_array(self, axis: Axis | str) -> FloatArray:
+    def get_axis_array(self, axis: Axis | str) -> FArray1D[F]:
         if isinstance(axis, str):
             axis = Axis.from_label(axis)
         idx = self.get_axis_index(axis)
@@ -302,13 +302,13 @@ class Coordinates:
             raise RuntimeError
         return arr.copy()
 
-    def get_axis_array_med(self, axis: Axis | str) -> FloatArray:
+    def get_axis_array_med(self, axis: Axis | str) -> FArray1D[F]:
         # convenience compatibility shim
         # should probably be removed or refactored
         if isinstance(axis, str):
             axis = Axis.from_label(axis)
         arr = self.get_axis_array(axis)
-        return 0.5 * (arr[1:] + arr[:-1])
+        return cast(FArray1D[F], 0.5 * (arr[1:] + arr[:-1]))
 
     def project_along(self, axis: Axis, position: float) -> Coordinates:
         from nonos.api.tools import find_around
@@ -338,14 +338,14 @@ class Coordinates:
         else:
             return _native_axis_from_target_axis(self.geometry, axis_1)
 
-    def _meshgrid_conversion_1d(self, axis_1: Axis) -> dict[Axis, FloatArray]:
+    def _meshgrid_conversion_1d(self, axis_1: Axis) -> dict[Axis, FArray1D[F]]:
         native_plane_axis = self.native_from_wanted(axis_1)
         native_meshcoords = self._meshgrid_reduction(native_plane_axis, None)
         return native_meshcoords
 
     def _meshgrid_conversion_2d(
         self, axis_1: Axis, axis_2: Axis
-    ) -> dict[Axis, FloatArray]:
+    ) -> dict[Axis, FArray1D[F]]:
         # TODO: fix interface
         native_plane_axes = self.native_from_wanted(axis_1, axis_2)
         native_meshcoords = self._meshgrid_reduction(*native_plane_axes)
@@ -354,7 +354,7 @@ class Coordinates:
 
     def _meshgrid_reduction(
         self, axis_1: Axis, axis_2: Axis | None, /
-    ) -> dict[Axis, FloatArray]:
+    ) -> dict[Axis, FArray1D[F]]:
         # TODO: this could easily be split into 2 functions (one for each dimensions)
         axes = axis_1, axis_2
         gaxes = axes_from_geometry(self.geometry)
@@ -363,13 +363,13 @@ class Coordinates:
         if axis_2 is not None and axis_2 not in gaxes:
             raise ValueError(f"expected one of {gaxes}, got {axis_2}")
 
-        dictmesh: dict[Axis, FloatArray] = {}
+        dictmesh: dict[Axis, FArray1D[F]] = {}
         if axis_2 is None:
             # 1D case
             dictmesh[axis_1] = self.get_axis_array_med(axis_1)
         else:
             # 2D case
-            dictcoords: dict[Axis, FloatArray] = {
+            dictcoords: dict[Axis, FArray1D[F]] = {
                 axis_1: self.get_axis_array(axis_1),
                 axis_2: self.get_axis_array(axis_2),
             }
@@ -384,8 +384,8 @@ class Coordinates:
     def target_from_native(
         self,
         target_geometry: Geometry,
-        coords: dict[Axis, FloatArray],
-    ) -> dict[Axis, FloatArray]:
+        coords: dict[Axis, FArray1D[F]],
+    ) -> dict[Axis, FArray1D[F]]:
         if self.geometry is Geometry.CARTESIAN:
             x = coords[Axis.CARTESIAN_X]
             y = coords[Axis.CARTESIAN_Y]
@@ -477,7 +477,7 @@ class Coordinates:
         else:
             assert_never(self.geometry)
 
-    def _safe_get_axis_array(self, attr) -> FloatArray:
+    def _safe_get_axis_array(self, attr) -> FArray1D[F]:
         try:
             return self.get_axis_array(attr)
         except KeyError:
@@ -485,7 +485,7 @@ class Coordinates:
                 f"Coordinates object has no attribute {attr}"
             ) from None
 
-    def _safe_get_axis_array_med(self, attr) -> FloatArray:
+    def _safe_get_axis_array_med(self, attr) -> FArray1D[F]:
         try:
             return self.get_axis_array_med(attr)
         except KeyError:
@@ -499,7 +499,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('x')"
     )
-    def x(self) -> FloatArray:
+    def x(self) -> FArray1D[F]:
         return self._safe_get_axis_array("x")
 
     @property
@@ -508,7 +508,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('y')"
     )
-    def y(self) -> FloatArray:
+    def y(self) -> FArray1D[F]:
         return self._safe_get_axis_array("y")
 
     @property
@@ -517,7 +517,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('z')"
     )
-    def z(self) -> FloatArray:
+    def z(self) -> FArray1D[F]:
         return self._safe_get_axis_array("z")
 
     @property
@@ -526,7 +526,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('r')"
     )
-    def r(self) -> FloatArray:
+    def r(self) -> FArray1D[F]:
         return self._safe_get_axis_array("r")
 
     @property
@@ -535,7 +535,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('theta')"
     )
-    def theta(self) -> FloatArray:
+    def theta(self) -> FArray1D[F]:
         return self._safe_get_axis_array("theta")
 
     @property
@@ -544,7 +544,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('phi')"
     )
-    def phi(self) -> FloatArray:
+    def phi(self) -> FArray1D[F]:
         return self._safe_get_axis_array("phi")
 
     @property
@@ -553,7 +553,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array('R')"
     )
-    def R(self) -> FloatArray:
+    def R(self) -> FArray1D[F]:
         return self._safe_get_axis_array("R")
 
     @property
@@ -562,7 +562,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('x')"
     )
-    def xmed(self) -> FloatArray:
+    def xmed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("x")
 
     @property
@@ -571,7 +571,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('y')"
     )
-    def ymed(self) -> FloatArray:
+    def ymed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("y")
 
     @property
@@ -580,7 +580,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('z')"
     )
-    def zmed(self) -> FloatArray:
+    def zmed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("z")
 
     @property
@@ -589,7 +589,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('r')"
     )
-    def rmed(self) -> FloatArray:
+    def rmed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("r")
 
     @property
@@ -598,7 +598,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('theta')"
     )
-    def thetamed(self) -> FloatArray:
+    def thetamed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("theta")
 
     @property
@@ -607,7 +607,7 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('phi')"
     )
-    def phimed(self) -> FloatArray:
+    def phimed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("phi")
 
     @property
@@ -616,5 +616,5 @@ class Coordinates:
         "and may be removed in a future version. "
         "Instead, use Coordinates.get_axis_array_med('R')"
     )
-    def Rmed(self) -> FloatArray:
+    def Rmed(self) -> FArray1D[F]:
         return self._safe_get_axis_array_med("R")
