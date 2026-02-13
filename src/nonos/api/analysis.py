@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic
 
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
@@ -22,7 +22,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import FloatArray, PlanetData
+from nonos._types import D, F, FArray, FArray1D, FloatArray, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
     _resolve_planet_file,
@@ -45,35 +45,36 @@ if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
-    from numpy.typing import NDArray
 
 
 @dataclass(frozen=True, eq=False, slots=True)
-class NamedArray:
+class NamedArray(Generic[D, F]):
     name: str
-    data: FloatArray
+    data: FArray[D, F]
 
 
-class Plotable:
+class Plotable(Generic[D, F]):
     __slots__ = ["abscissa", "ordinate", "field"]
 
     def __init__(
         self,
         *,
-        abscissa: tuple[str, FloatArray],
-        ordinate: tuple[str, FloatArray],
-        field: tuple[str, FloatArray] | None = None,
+        abscissa: tuple[str, FArray[D, F]],
+        ordinate: tuple[str, FArray[D, F]],
+        field: tuple[str, FArray[D, F]] | None = None,
     ) -> None:
-        self.abscissa = NamedArray(*abscissa)
-        self.ordinate = NamedArray(*ordinate)
-        self.field = None if field is None else NamedArray(*field)
+        self.abscissa: NamedArray[D, F] = NamedArray(*abscissa)
+        self.ordinate: NamedArray[D, F] = NamedArray(*ordinate)
+        self.field: NamedArray[D, F] | None = (
+            None if field is None else NamedArray(*field)
+        )
         if ndim := self.data.ndim > 2:
             raise TypeError(
                 f"Plotable doesn't support data with dimensionality>2, got {ndim}"
             )
 
     @property
-    def data(self) -> "NDArray[np.floating]":
+    def data(self) -> FArray[D, F]:
         if self.field is not None:
             arr = self.field.data
             assert arr.ndim == 2
@@ -123,11 +124,15 @@ class Plotable:
                 if "vmax" in kwargs:
                     norm.vmax = kwargs.pop("vmax")
             else:
-                vmin = kwargs.pop("vmin") if "vmin" in kwargs else np.nanmin(data)
-                vmax = kwargs.pop("vmax") if "vmax" in kwargs else np.nanmax(data)
+                vmin = (
+                    kwargs.pop("vmin") if "vmin" in kwargs else float(np.nanmin(data))
+                )
+                vmax = (
+                    kwargs.pop("vmax") if "vmax" in kwargs else float(np.nanmax(data))
+                )
                 kw.update({"vmin": vmin, "vmax": vmax})
 
-            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **kwargs, **kw)
+            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **(kwargs | kw))
             ax.set(
                 xlim=(aval.min(), aval.max()),
                 ylim=(oval.min(), oval.max()),
@@ -177,7 +182,9 @@ class Plotable:
         return artist
 
 
-def _get_ind_output_number(loader: Loader, output_number: int, time: FloatArray) -> int:
+def _get_ind_output_number(
+    loader: Loader, output_number: int, time: FArray1D[F]
+) -> int:
     ini = loader.load_ini_file()
     target_time = ini.output_time_interval * output_number
     return find_nearest(time, target_time)
