@@ -82,10 +82,12 @@ jobs:
     strategy:
       matrix:
         python-version:
-        - '3.10'
+        # we do not check on 3.10 because numpy 2.2.x isn't specific enough and we'd get false positives
+        # - '3.10'
         - '3.11'
         - '3.12'
         - '3.13'
+        - '3.14'
 
     runs-on: ubuntu-latest
     name: type-checking
