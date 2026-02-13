@@ -7,15 +7,15 @@ __all__ = [
 import os
 import re
 from pathlib import Path
-from typing import final
+from typing import Generic, final
 
 import numpy as np
 
-from nonos._types import PlanetData
+from nonos._types import F, PlanetData
 
 
 @final
-class NullReader:
+class NullReader(Generic[F]):
     @staticmethod
     def get_planet_files(directory: Path, /) -> list[Path]:
         raise NotImplementedError(
@@ -32,13 +32,13 @@ class NullReader:
 
 
 @final
-class IdefixReader:
+class IdefixReader(Generic[F]):
     @staticmethod
     def get_planet_files(directory: Path, /) -> list[Path]:
         return sorted(directory.glob("planet*.dat"))
 
     @staticmethod
-    def read(file: os.PathLike[str], /) -> PlanetData:
+    def read(file: os.PathLike[str], /) -> PlanetData[F]:
         dt, x, y, z, vx, vy, vz, q, t = np.loadtxt(file).T
         return PlanetData(x, y, z, vx, vy, vz, q, t, dt)
 
@@ -55,25 +55,25 @@ class FargoReaderHelper:
 
 
 @final
-class Fargo3DReader:
+class Fargo3DReader(Generic[F]):
     @staticmethod
     def get_planet_files(directory: Path, /) -> list[Path]:
         return FargoReaderHelper.get_planet_files(directory)
 
     @staticmethod
-    def read(file: os.PathLike[str], /) -> PlanetData:
+    def read(file: os.PathLike[str], /) -> PlanetData[F]:
         dt, x, y, z, vx, vy, vz, q, t, *_ = np.loadtxt(file).T
         return PlanetData(x, y, z, vx, vy, vz, q, t, dt)
 
 
 @final
-class FargoADSGReader:
+class FargoADSGReader(Generic[F]):
     @staticmethod
     def get_planet_files(directory: Path, /) -> list[Path]:
         return FargoReaderHelper.get_planet_files(directory)
 
     @staticmethod
-    def read(file: os.PathLike[str], /) -> PlanetData:
+    def read(file: os.PathLike[str], /) -> PlanetData[F]:
         dt, x, y, vx, vy, q, _, _, t, *_ = np.loadtxt(file).T
         z = np.zeros_like(x)
         vz = np.zeros_like(vx)
