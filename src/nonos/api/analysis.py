@@ -206,7 +206,7 @@ def _find_planet_azimuth(
 class GasField(Generic[D, F]):
     name: str
     data: FArray[D, F]
-    coordinates: Coordinates
+    coordinates: Coordinates[F]
     native_geometry: Geometry
     output_number: int
     loader: Loader
