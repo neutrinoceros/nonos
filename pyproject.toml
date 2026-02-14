@@ -69,8 +69,10 @@ covcheck = [
     "numexpr>=2.10.2",
 ]
 typecheck = [
+    "nonos[all]",
     "matplotlib>=3.8.0",
     "mypy>=1.13.0",
+    "scipy-stubs>=1.15.3.0",
 ]
 docs = [
     "nonos[cli]",
