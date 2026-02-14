@@ -1280,7 +1280,7 @@ provides-extras = ["cli", "all"]
 [package.metadata.requires-dev]
 covcheck = [
     { name = "cogapp", specifier = ">=3.3.0" },
-    { name = "coverage", specifier = ">=7.6.12" },
+    { name = "coverage", specifier = ">=7.10.0" },
     { name = "coverage", extras = ["toml"], marker = "python_full_version < '3.11'" },
     { name = "numexpr", specifier = ">=2.10.2" },
     { name = "pytest", specifier = ">=9.0.0" },
