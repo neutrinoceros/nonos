@@ -184,32 +184,33 @@ class Ingredients:
 
     @classmethod
     def from_recipe(cls, recipe: Recipe, /) -> "Ingredients":
-        if recipe is Recipe.IDEFIX_VTK:
-            return Ingredients(
-                binary_reader=readers.binary.VTKReader,
-                planet_reader=readers.planet.IdefixReader,
-                ini_reader=readers.ini.IdefixVTKReader,
-            )
-        elif recipe is Recipe.PLUTO_VTK:
-            return Ingredients(
-                binary_reader=readers.binary.VTKReader,
-                planet_reader=readers.planet.NullReader,
-                ini_reader=readers.ini.PlutoVTKReader,
-            )
-        elif recipe is Recipe.FARGO3D:
-            return Ingredients(
-                binary_reader=readers.binary.Fargo3DReader,
-                planet_reader=readers.planet.Fargo3DReader,
-                ini_reader=readers.ini.Fargo3DReader,
-            )
-        elif recipe is Recipe.FARGO_ADSG:
-            return Ingredients(
-                binary_reader=readers.binary.FargoADSGReader,
-                planet_reader=readers.planet.FargoADSGReader,
-                ini_reader=readers.ini.FargoADSGReader,
-            )
-        else:
-            assert_never(recipe)
+        match recipe:
+            case Recipe.IDEFIX_VTK:
+                return Ingredients(
+                    binary_reader=readers.binary.VTKReader,
+                    planet_reader=readers.planet.IdefixReader,
+                    ini_reader=readers.ini.IdefixVTKReader,
+                )
+            case Recipe.PLUTO_VTK:
+                return Ingredients(
+                    binary_reader=readers.binary.VTKReader,
+                    planet_reader=readers.planet.NullReader,
+                    ini_reader=readers.ini.PlutoVTKReader,
+                )
+            case Recipe.FARGO3D:
+                return Ingredients(
+                    binary_reader=readers.binary.Fargo3DReader,
+                    planet_reader=readers.planet.Fargo3DReader,
+                    ini_reader=readers.ini.Fargo3DReader,
+                )
+            case Recipe.FARGO_ADSG:
+                return Ingredients(
+                    binary_reader=readers.binary.FargoADSGReader,
+                    planet_reader=readers.planet.FargoADSGReader,
+                    ini_reader=readers.ini.FargoADSGReader,
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 def recipe_from(

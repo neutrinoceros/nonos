@@ -66,14 +66,15 @@ assert all(axis in _AXIS_TO_STR for axis in Axis)
 
 
 def axes_from_geometry(geometry: Geometry, /) -> tuple[Axis, Axis, Axis]:
-    if geometry is Geometry.CARTESIAN:
-        return (Axis.CARTESIAN_X, Axis.CARTESIAN_Y, Axis.CARTESIAN_Z)
-    elif geometry is Geometry.POLAR:
-        return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH, Axis.CARTESIAN_Z)
-    elif geometry is Geometry.SPHERICAL:
-        return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE, Axis.AZIMUTH)
-    else:
-        assert_never(geometry)
+    match geometry:
+        case Geometry.CARTESIAN:
+            return (Axis.CARTESIAN_X, Axis.CARTESIAN_Y, Axis.CARTESIAN_Z)
+        case Geometry.POLAR:
+            return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH, Axis.CARTESIAN_Z)
+        case Geometry.SPHERICAL:
+            return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE, Axis.AZIMUTH)
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def _get_target_geometry(*axes: Axis) -> Geometry:
@@ -102,50 +103,35 @@ def _native_axis_from_target_axis(
     if axis in axes_from_geometry(native_geometry):
         return axis
 
-    # shorthands are locally helpful for readability
-    X = Axis.CARTESIAN_X
-    Y = Axis.CARTESIAN_Y
-    Z = Axis.CARTESIAN_Z
-    PHI = Axis.AZIMUTH
-    CR = Axis.CYLINDRICAL_RADIUS
-    SR = Axis.SPHERICAL_RADIUS
-    THETA = Axis.COLATITUDE
+    match native_geometry, axis:
+        # SPHERICAL to CARTESIAN
+        case Geometry.SPHERICAL, Axis.CARTESIAN_X:
+            return Axis.SPHERICAL_RADIUS
+        case Geometry.SPHERICAL, Axis.CARTESIAN_Y:
+            return Axis.AZIMUTH  # grotesque
+        case Geometry.SPHERICAL, Axis.CARTESIAN_Y:
+            return Axis.COLATITUDE
 
-    if native_geometry is Geometry.CARTESIAN:
-        pass
+        # SPHERICAL to POLAR
+        case Geometry.SPHERICAL, Axis.CYLINDRICAL_RADIUS:
+            return Axis.SPHERICAL_RADIUS
 
-    elif native_geometry is Geometry.SPHERICAL:
-        # to CARTESIAN
-        if axis is X:
-            return SR
-        if axis is Y:
-            return PHI  # grotesque
-        if axis is Z:
-            return THETA
+        # POLAR to CARTESIAN
+        case Geometry.POLAR, Axis.CARTESIAN_X:
+            return Axis.CYLINDRICAL_RADIUS
+        case Geometry.POLAR, Axis.CARTESIAN_Y:
+            return Axis.AZIMUTH  # grotesque
 
-        # to POLAR
-        if axis is CR:
-            return SR
+        # POLAR to SPHERICAL
+        case Geometry.POLAR, Axis.SPHERICAL_RADIUS:
+            return Axis.CYLINDRICAL_RADIUS
+        case Geometry.POLAR, Axis.COLATITUDE:
+            return Axis.CARTESIAN_Z
 
-    elif native_geometry is Geometry.POLAR:
-        # to CARTESIAN
-        if axis is X:
-            return CR
-        if axis is Y:
-            return PHI  # grotesque
-
-        # to SPHERICAL
-        if axis is SR:
-            return CR
-        if axis is THETA:
-            return Z
-
-    else:
-        assert_never(native_geometry)
-
-    raise NotImplementedError(
-        f"Transformation from {native_geometry} to {axis} is not implemented"
-    )
+        case _:
+            raise NotImplementedError(
+                f"Transformation from {native_geometry} to {axis} is not implemented"
+            )
 
 
 def _native_plane_from_target_plane(
@@ -180,72 +166,57 @@ def _native_plane_from_target_plane(
     if set(input_tuple).issubset(axes_from_geometry(native_geometry)):
         return input_tuple
 
-    # shorthands are locally helpful for readability
-    X = Axis.CARTESIAN_X
-    Y = Axis.CARTESIAN_Y
-    Z = Axis.CARTESIAN_Z
-    PHI = Axis.AZIMUTH
-    CR = Axis.CYLINDRICAL_RADIUS
-    SR = Axis.SPHERICAL_RADIUS
-    THETA = Axis.COLATITUDE
+    match native_geometry, input_tuple:
+        # SPHERICAL to CARTESIAN
+        case Geometry.SPHERICAL, (Axis.CARTESIAN_X, Axis.CARTESIAN_Y):
+            return (Axis.SPHERICAL_RADIUS, Axis.AZIMUTH)
+        case Geometry.SPHERICAL, (Axis.CARTESIAN_X, Axis.CARTESIAN_Z):
+            return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE)
+        case Geometry.SPHERICAL, (Axis.CARTESIAN_Y, Axis.CARTESIAN_Z):
+            return (Axis.AZIMUTH, Axis.COLATITUDE)  # grotesque
 
-    if native_geometry is Geometry.CARTESIAN:
-        pass
+        # SPHERICAL to POLAR
+        case Geometry.SPHERICAL, (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH):
+            return (Axis.SPHERICAL_RADIUS, Axis.AZIMUTH)
+        case Geometry.SPHERICAL, (Axis.CYLINDRICAL_RADIUS, Axis.CARTESIAN_Z):
+            return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE)  # genuine
+        case Geometry.SPHERICAL, (Axis.AZIMUTH, Axis.CARTESIAN_Z):
+            return (Axis.AZIMUTH, Axis.COLATITUDE)
 
-    elif native_geometry is Geometry.SPHERICAL:
-        # to CARTESIAN
-        if input_tuple == (X, Y):
-            return (SR, PHI)
-        if input_tuple == (X, Z):
-            return (SR, THETA)
-        if input_tuple == (Y, Z):
-            return (PHI, THETA)  # grotesque
+        # POLAR to CARTESIAN
+        case Geometry.POLAR, (Axis.CARTESIAN_X, Axis.CARTESIAN_Y):
+            return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH)  # genuine
+        case Geometry.POLAR, (Axis.CARTESIAN_X, Axis.CARTESIAN_Z):
+            return (Axis.CYLINDRICAL_RADIUS, Axis.CARTESIAN_Z)
+        case Geometry.POLAR, (Axis.CARTESIAN_Y, Axis.CARTESIAN_Z):
+            return (Axis.AZIMUTH, Axis.CARTESIAN_Z)  # grotesque
 
-        # to POLAR
-        if input_tuple == (CR, PHI):
-            return (SR, PHI)
-        if input_tuple == (CR, Z):
-            return (SR, THETA)  # genuine
-        if input_tuple == (PHI, Z):
-            return (PHI, THETA)
+        # POLAR to SPHERICAL
+        case Geometry.POLAR, (Axis.SPHERICAL_RADIUS, Axis.AZIMUTH):
+            return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH)
+        case Geometry.POLAR, (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE):
+            return (Axis.CYLINDRICAL_RADIUS, Axis.CARTESIAN_Z)  # genuine
+        case Geometry.POLAR, (Axis.AZIMUTH, Axis.COLATITUDE):
+            return (Axis.AZIMUTH, Axis.CARTESIAN_Z)
 
-    elif native_geometry is Geometry.POLAR:
-        # to CARTESIAN
-        if input_tuple == (X, Y):
-            return (CR, PHI)  # genuine
-        if input_tuple == (X, Z):
-            return (CR, Z)
-        if input_tuple == (Y, Z):
-            return (PHI, Z)  # grotesque
+        case _ if _recurse:
+            # order matters. Rercursion allows use to implement only half of all cases
+            a1, a2 = _native_plane_from_target_plane(
+                native_geometry,
+                axis_2,
+                axis_1,
+                _recurse=False,
+            )
+            return a2, a1
 
-        # to SPHERICAL
-        if input_tuple == (SR, PHI):
-            return (CR, PHI)
-        if input_tuple == (SR, THETA):
-            return (CR, Z)  # genuine
-        if input_tuple == (PHI, THETA):
-            return (PHI, Z)
-
-    else:
-        assert_never(native_geometry)
-
-    if _recurse:
-        # order matters. Rercursion allows use to implement only half of all cases
-        out_2, out_1 = _native_plane_from_target_plane(
-            native_geometry,
-            axis_2,
-            axis_1,
-            _recurse=False,
-        )
-        return out_1, out_2
-
-    # note that we can only land here after recursion/input inversion,
-    # so we revert the order of arguments back to was was passed from
-    # the outside
-    raise NotImplementedError(
-        f"Transformation from {native_geometry} to ({axis_2}, {axis_1}) "
-        "is not implemented"
-    )
+        case _:
+            # note that we can only land here after recursion/input inversion,
+            # so we revert the order of arguments back to what was passed from
+            # the outside
+            raise NotImplementedError(
+                f"Transformation from {native_geometry} to ({axis_2}, {axis_1}) "
+                "is not implemented"
+            )
 
 
 @final
@@ -386,96 +357,99 @@ class Coordinates(Generic[F]):
         target_geometry: Geometry,
         coords: dict[Axis, FArray1D[F]],
     ) -> dict[Axis, FArray1D[F]]:
-        if self.geometry is Geometry.CARTESIAN:
-            x = coords[Axis.CARTESIAN_X]
-            y = coords[Axis.CARTESIAN_Y]
-            z = coords[Axis.CARTESIAN_Z]
-            if target_geometry is Geometry.CARTESIAN:
-                return {
-                    Axis.CARTESIAN_X: x,
-                    Axis.CARTESIAN_Y: y,
-                    Axis.CARTESIAN_Z: z,
-                }
-            elif target_geometry is Geometry.POLAR:
-                return {
-                    Axis.CYLINDRICAL_RADIUS: np.sqrt(x**2 + y**2),
-                    Axis.AZIMUTH: np.arctan2(y, x),
-                    Axis.CARTESIAN_Z: z,
-                }
-            elif target_geometry is Geometry.SPHERICAL:
-                return {
-                    Axis.SPHERICAL_RADIUS: np.sqrt(x**2 + y**2 + z**2),
-                    Axis.COLATITUDE: np.arctan2(np.sqrt(x**2 + y**2), z),
-                    Axis.AZIMUTH: np.arctan2(y, x),
-                }
-            else:
-                assert_never(target_geometry)
-                raise ValueError(f"Unknown target geometry {target_geometry}.")
+        match self.geometry:
+            case Geometry.CARTESIAN:
+                x = coords[Axis.CARTESIAN_X]
+                y = coords[Axis.CARTESIAN_Y]
+                z = coords[Axis.CARTESIAN_Z]
+                match target_geometry:
+                    case Geometry.CARTESIAN:
+                        return {
+                            Axis.CARTESIAN_X: x,
+                            Axis.CARTESIAN_Y: y,
+                            Axis.CARTESIAN_Z: z,
+                        }
+                    case Geometry.POLAR:
+                        return {
+                            Axis.CYLINDRICAL_RADIUS: np.sqrt(x**2 + y**2),
+                            Axis.AZIMUTH: np.arctan2(y, x),
+                            Axis.CARTESIAN_Z: z,
+                        }
+                    case Geometry.SPHERICAL:
+                        return {
+                            Axis.SPHERICAL_RADIUS: np.sqrt(x**2 + y**2 + z**2),
+                            Axis.COLATITUDE: np.arctan2(np.sqrt(x**2 + y**2), z),
+                            Axis.AZIMUTH: np.arctan2(y, x),
+                        }
+                    case _ as unreachable:
+                        assert_never(unreachable)
 
-        elif self.geometry is Geometry.SPHERICAL:
-            r = coords[Axis.SPHERICAL_RADIUS]
-            theta = coords[Axis.COLATITUDE]
-            phi = coords[Axis.AZIMUTH]
-            if target_geometry is Geometry.CARTESIAN:
-                # note: I'm intentionally not reproducing a
-                # special case that I don't think is needed (theta.ndim<=1)
-                if theta.ndim <= 1:
-                    # bug-for-bug compat
-                    # this is extremely suspicious and should be inspected
-                    # more thoroughly, I suspect it's just working around
-                    # a completely different bug
-                    return {
-                        Axis.CARTESIAN_X: r * np.sin(theta) * np.cos(phi),
-                        Axis.CARTESIAN_Y: r * np.sin(theta) * np.sin(phi),
-                        Axis.CARTESIAN_Z: np.cos(theta),
-                    }
-                return {
-                    Axis.CARTESIAN_X: r * np.sin(theta) * np.cos(phi),
-                    Axis.CARTESIAN_Y: r * np.sin(theta) * np.sin(phi),
-                    Axis.CARTESIAN_Z: r * np.cos(theta),
-                }
-            elif target_geometry is Geometry.POLAR:
-                return {
-                    Axis.CYLINDRICAL_RADIUS: r * np.sin(theta),
-                    Axis.AZIMUTH: phi,
-                    Axis.CARTESIAN_Z: r * np.cos(theta),
-                }
-            elif target_geometry is Geometry.SPHERICAL:
-                return {
-                    Axis.SPHERICAL_RADIUS: r,
-                    Axis.COLATITUDE: theta,
-                    Axis.AZIMUTH: phi,
-                }
-            else:
-                assert_never(target_geometry)
+            case Geometry.SPHERICAL:
+                r = coords[Axis.SPHERICAL_RADIUS]
+                theta = coords[Axis.COLATITUDE]
+                phi = coords[Axis.AZIMUTH]
+                match target_geometry:
+                    case Geometry.CARTESIAN:
+                        # note: I'm intentionally not reproducing a
+                        # special case that I don't think is needed (theta.ndim<=1)
+                        if theta.ndim <= 1:
+                            # bug-for-bug compat
+                            # this is extremely suspicious and should be inspected
+                            # more thoroughly, I suspect it's just working around
+                            # a completely different bug
+                            return {
+                                Axis.CARTESIAN_X: r * np.sin(theta) * np.cos(phi),
+                                Axis.CARTESIAN_Y: r * np.sin(theta) * np.sin(phi),
+                                Axis.CARTESIAN_Z: np.cos(theta),
+                            }
+                        return {
+                            Axis.CARTESIAN_X: r * np.sin(theta) * np.cos(phi),
+                            Axis.CARTESIAN_Y: r * np.sin(theta) * np.sin(phi),
+                            Axis.CARTESIAN_Z: r * np.cos(theta),
+                        }
+                    case Geometry.POLAR:
+                        return {
+                            Axis.CYLINDRICAL_RADIUS: r * np.sin(theta),
+                            Axis.AZIMUTH: phi,
+                            Axis.CARTESIAN_Z: r * np.cos(theta),
+                        }
+                    case Geometry.SPHERICAL:
+                        return {
+                            Axis.SPHERICAL_RADIUS: r,
+                            Axis.COLATITUDE: theta,
+                            Axis.AZIMUTH: phi,
+                        }
+                    case _ as unreachable:
+                        assert_never(unreachable)
 
-        elif self.geometry is Geometry.POLAR:
-            R = coords[Axis.CYLINDRICAL_RADIUS]
-            phi = coords[Axis.AZIMUTH]
-            z = coords[Axis.CARTESIAN_Z]
-            if target_geometry is Geometry.CARTESIAN:
-                return {
-                    Axis.CARTESIAN_X: R * np.cos(phi),
-                    Axis.CARTESIAN_Y: R * np.sin(phi),
-                    Axis.CARTESIAN_Z: z,
-                }
-            elif target_geometry is Geometry.POLAR:
-                return {
-                    Axis.CYLINDRICAL_RADIUS: R,
-                    Axis.AZIMUTH: phi,
-                    Axis.CARTESIAN_Z: z,
-                }
-            elif target_geometry is Geometry.SPHERICAL:
-                return {
-                    Axis.SPHERICAL_RADIUS: np.sqrt(R**2 + z**2),
-                    Axis.COLATITUDE: np.arctan2(R, z),
-                    Axis.AZIMUTH: phi,
-                }
-            else:
-                assert_never(target_geometry)
+            case Geometry.POLAR:
+                R = coords[Axis.CYLINDRICAL_RADIUS]
+                phi = coords[Axis.AZIMUTH]
+                z = coords[Axis.CARTESIAN_Z]
+                match target_geometry:
+                    case Geometry.CARTESIAN:
+                        return {
+                            Axis.CARTESIAN_X: R * np.cos(phi),
+                            Axis.CARTESIAN_Y: R * np.sin(phi),
+                            Axis.CARTESIAN_Z: z,
+                        }
+                    case Geometry.POLAR:
+                        return {
+                            Axis.CYLINDRICAL_RADIUS: R,
+                            Axis.AZIMUTH: phi,
+                            Axis.CARTESIAN_Z: z,
+                        }
+                    case Geometry.SPHERICAL:
+                        return {
+                            Axis.SPHERICAL_RADIUS: np.sqrt(R**2 + z**2),
+                            Axis.COLATITUDE: np.arctan2(R, z),
+                            Axis.AZIMUTH: phi,
+                        }
+                    case _ as unreachable:
+                        assert_never(unreachable)
 
-        else:
-            assert_never(self.geometry)
+            case _ as unreachable:
+                assert_never(unreachable)
 
     def _safe_get_axis_array(self, attr) -> FArray1D[F]:
         try:
