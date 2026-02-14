@@ -65,7 +65,7 @@ test = [
 covcheck = [
     {include-group = "test"},
     "coverage[toml]; python_full_version < '3.11'",
-    "coverage>=7.6.12",
+    "coverage>=7.10.0",
     "numexpr>=2.10.2",
 ]
 typecheck = [
@@ -154,15 +154,8 @@ skip_covered = false
 # use exclude_also to *extend* the default exclude_lines,
 # and allow purely defensive code patterns
 exclude_also = [
-    # the first two lines can be removed when coverage is bumped to >=7.10.0
-    "^\\s*(((async )?def .*?)?\\)(\\s*->.*?)?:\\s*)?\\.\\.\\.\\s*(#|$)",
-    "if (typing\\.)?TYPE_CHECKING:",
-
-    # actual extensions
-    "^\\s*raise NotImplementedError\\b",
-    "^\\s*raise AssertionError\\b",
-    "^\\s*case _ as unreachable:",
-    "^\\s*assert_never\\b",
+    "^\\s*raise (Assertion|NotImplemented)Error\\b",
+    "^\\s*case _ as _?unreachable:",
 ]
 
 [tool.uv]
