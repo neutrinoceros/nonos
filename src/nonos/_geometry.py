@@ -485,7 +485,7 @@ class Coordinates(Generic[F]):
                 f"Coordinates object has no attribute {attr}"
             ) from None
 
-    def _safe_get_axis_array_med(self, attr) -> FArray1D[F]:
+    def _safe_get_axis_array_med(self, attr: str) -> FArray1D[F]:
         try:
             return self.get_axis_array_med(attr)
         except KeyError:

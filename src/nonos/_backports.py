@@ -14,7 +14,7 @@ if sys.version_info < (3, 11):
         Enum where members are also (and must be) strings
         """
 
-        def __new__(cls, *values):
+        def __new__(cls, *values):  # type: ignore
             "values must already be of type `str`"
             if len(values) > 3:
                 raise TypeError(f"too many arguments for str(): {values!r}")
@@ -35,7 +35,7 @@ if sys.version_info < (3, 11):
             member._value_ = value
             return member
 
-        def _generate_next_value_(name, start, count, last_values):  # noqa: ARG002 # ty: ignore[invalid-method-override]
+        def _generate_next_value_(name, start, count, last_values):  # noqa: ARG002 # type: ignore
             """
             Return the lower-cased version of the member name.
             """
