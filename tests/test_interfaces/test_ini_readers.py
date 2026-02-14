@@ -32,7 +32,7 @@ class TestFargoReaders:
         elif reader is Fargo3DReader:
             return compile_to_Fargo3D(text)
         else:
-            raise RuntimeError
+            raise AssertionError
 
     @pytest.mark.parametrize(
         "template_lines, expected_frame, expected_rotational_rate",

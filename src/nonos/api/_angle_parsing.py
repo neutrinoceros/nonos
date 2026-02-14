@@ -82,7 +82,7 @@ def _resolve_rotate_by(
     if rotate_by is None:
         # this is never supposed to happen, but it's needed to convince mypy that
         # we will not return a None
-        raise RuntimeError
+        raise AssertionError
 
     return rotate_by
 
