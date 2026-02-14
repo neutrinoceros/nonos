@@ -403,7 +403,7 @@ class VTKReader:
         if meta["computedata"]:
             new_shape = n3, n2, n1
             grid_size = int(np.prod(new_shape))
-            while 1:
+            while True:
                 # SCALARS/VECTORS name data_type (ex: SCALARS imagedata unsigned_char)
                 s = fid.readline()
                 if len(s) < 2:  # leave if end of file
