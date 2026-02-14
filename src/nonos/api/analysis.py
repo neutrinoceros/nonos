@@ -156,7 +156,7 @@ class Plotable(Generic[D, F]):
                     # https://github.com/matplotlib/matplotlib/issues/25994
                     trf = cb_axis.get_transform()
                     if not isinstance(trf, SymmetricalLogTransform):
-                        raise RuntimeError
+                        raise AssertionError
                     cb_axis.set_major_locator(SymmetricalLogLocator(trf))
                     if float(trf.base).is_integer():
                         locator = SymmetricalLogLocator(
@@ -445,7 +445,7 @@ class GasField(Generic[D, F]):
                 field=(data_key, data_view),
             )
         else:
-            raise RuntimeError
+            raise AssertionError
 
     def save(
         self,

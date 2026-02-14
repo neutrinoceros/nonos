@@ -794,7 +794,7 @@ class NPYReader:
         for file in haystack:
             match = NPYReader._filename_re.fullmatch(file.name)
             if match is None:
-                raise RuntimeError
+                raise AssertionError
             if match.group("prefix") != prefix:
                 continue
             if int(match.group("output_number")) != output_number:

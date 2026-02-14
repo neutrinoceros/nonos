@@ -161,7 +161,7 @@ exclude_also = [
 
     # actual extensions
     "^\\s*raise NotImplementedError\\b",
-    "^\\s*raise RuntimeError\\b",
+    "^\\s*raise AssertionError\\b",
     "^\\s*case _ as unreachable:",
     "^\\s*assert_never\\b",
 ]
