@@ -361,18 +361,15 @@ class GasField(Generic[D, F]):
                     np.ediff1d(find_around(phicoord, 0))[0]
                 ):
                     ipi = find_nearest(phicoord, 2 * np.pi)
-                if self.native_geometry is Geometry.CARTESIAN:
-                    raise NotImplementedError(
-                        "rotation isn't implemented for cartesian geometry"
-                    )
-                elif self.native_geometry is Geometry.POLAR:
-                    data_view = np.roll(self.data, -ipi + 1, axis=1)
-                elif self.native_geometry is Geometry.SPHERICAL:
-                    data_view = np.roll(self.data, -ipi + 1, axis=2)
-                else:
-                    raise NotImplementedError(
-                        f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
-                    )
+                match self.native_geometry:
+                    case Geometry.POLAR:
+                        data_view = np.roll(self.data, -ipi + 1, axis=1)
+                    case Geometry.SPHERICAL:
+                        data_view = np.roll(self.data, -ipi + 1, axis=2)
+                    case _:
+                        raise NotImplementedError(
+                            f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                        )
             else:
                 data_view = self.data.view()
 
@@ -409,14 +406,15 @@ class GasField(Generic[D, F]):
                     np.ediff1d(find_around(phicoord, 0))[0]
                 ):
                     ipi = find_nearest(phicoord, 2 * np.pi)
-                if self.native_geometry is Geometry.POLAR:
-                    data_view = np.roll(self.data, -ipi + 1, axis=1)
-                elif self.native_geometry is Geometry.SPHERICAL:
-                    data_view = np.roll(self.data, -ipi + 1, axis=2)
-                else:
-                    raise NotImplementedError(
-                        f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
-                    )
+                match self.native_geometry:
+                    case Geometry.POLAR:
+                        data_view = np.roll(self.data, -ipi + 1, axis=1)
+                    case Geometry.SPHERICAL:
+                        data_view = np.roll(self.data, -ipi + 1, axis=2)
+                    case _:
+                        raise NotImplementedError(
+                            f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                        )
             else:
                 data_view = self.data.view()
 
@@ -492,44 +490,43 @@ class GasField(Generic[D, F]):
         return file
 
     def find_ir(self, distance: float = 1.0) -> int:
-        if self.native_geometry is Geometry.POLAR:
-            return find_nearest(
-                self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS), distance
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            return find_nearest(
-                self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS), distance
-            )
-        elif self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.POLAR:
+                return find_nearest(
+                    self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS),
+                    distance,
+                )
+            case Geometry.SPHERICAL:
+                return find_nearest(
+                    self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS),
+                    distance,
+                )
+            case Geometry.CARTESIAN:
+                raise NotImplementedError
+            case _ as unreachable:
+                assert_never(unreachable)
 
     def find_imid(self, altitude: float = 0.0) -> int:
-        if (
-            self.native_geometry is Geometry.CARTESIAN
-            or self.native_geometry is Geometry.POLAR
-        ):
-            arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            return find_nearest(arr, altitude)
-        elif self.native_geometry is Geometry.SPHERICAL:
-            arr = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
-            return find_nearest(arr, np.pi / 2 - altitude)
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN | Geometry.POLAR:
+                arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                return find_nearest(arr, altitude)
+            case Geometry.SPHERICAL:
+                arr = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
+                return find_nearest(arr, np.pi / 2 - altitude)
+            case _ as unreachable:
+                assert_never(unreachable)
 
     def find_iphi(self, phi: float = 0) -> int:
-        if (
-            self.native_geometry is Geometry.POLAR
-            or self.native_geometry is Geometry.SPHERICAL
-        ):
-            phiarr = self.coordinates.get_axis_array(Axis.AZIMUTH)
-            mod = len(phiarr) - 1
-            return find_nearest(phiarr, phi) % mod
-        elif self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.POLAR | Geometry.SPHERICAL:
+                phiarr = self.coordinates.get_axis_array(Axis.AZIMUTH)
+                mod = len(phiarr) - 1
+                return find_nearest(phiarr, phi) % mod
+            case Geometry.CARTESIAN:
+                raise NotImplementedError
+            case _ as unreachable:
+                assert_never(unreachable)
 
     def _load_planet(
         self,
@@ -611,69 +608,62 @@ class GasField(Generic[D, F]):
         )
 
         imid = self.find_imid()
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                "latitudinal_projection isn't implemented for cartesian geometry"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            ret_coords = Coordinates(
-                self.native_geometry,
-                self.coordinates.get_axis_array("R"),
-                self.coordinates.get_axis_array("phi"),
-                find_around(
-                    self.coordinates.get_axis_array("z"),
-                    self.coordinates.get_axis_array_med("z")[imid],
-                ),
-            )
-            R = self.coordinates.get_axis_array_med("R")
-            z = self.coordinates.get_axis_array_med("z")
-            integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
-            # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
-            for i in range(self.shape[0]):
-                km = find_nearest(z, z.min())
-                kp = find_nearest(z, z.max())
-                if theta is not None:
-                    km = find_nearest(z, -R[i] * theta)
-                    kp = find_nearest(z, R[i] * theta)
-                integral[i, :] = np.sum(
-                    (
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    "latitudinal_projection isn't implemented for cartesian geometry"
+                )
+            case Geometry.POLAR:
+                ret_coords = Coordinates(
+                    self.native_geometry,
+                    self.coordinates.get_axis_array("R"),
+                    self.coordinates.get_axis_array("phi"),
+                    find_around(
+                        self.coordinates.get_axis_array("z"),
+                        self.coordinates.get_axis_array_med("z")[imid],
+                    ),
+                )
+                R = self.coordinates.get_axis_array_med("R")
+                z = self.coordinates.get_axis_array_med("z")
+                integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
+                # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
+                for i in range(self.shape[0]):
+                    km = find_nearest(z, z.min())
+                    kp = find_nearest(z, z.max())
+                    if theta is not None:
+                        km = find_nearest(z, -R[i] * theta)
+                        kp = find_nearest(z, R[i] * theta)
+                    integral[i, :] = (
                         self.data[i, :, :]
                         * np.ediff1d(self.coordinates.get_axis_array("z"))[None, :]
-                    )[:, km : kp + 1],
-                    axis=1,
-                    dtype="float64",
-                )
-                # integral[i,km] = -1
-                # integral[i,kp] = 1
-            ret_data = integral.reshape(self.shape[0], self.shape[1], 1)
-            # ret_data = integral.reshape(self.shape[0],1,self.shape[2])
-        elif self.native_geometry is Geometry.SPHERICAL:
-            ret_coords = Coordinates(
-                self.native_geometry,
-                self.coordinates.get_axis_array("r"),
-                find_around(
-                    self.coordinates.get_axis_array("theta"),
-                    self.coordinates.get_axis_array_med("theta")[imid],
-                ),
-                self.coordinates.get_axis_array("phi"),
-            )
-            km = find_nearest(
-                self.coordinates.get_axis_array("theta"),
-                self.coordinates.get_axis_array("theta").min(),
-            )
-            kp = find_nearest(
-                self.coordinates.get_axis_array("theta"),
-                self.coordinates.get_axis_array("theta").max(),
-            )
-            if theta is not None:
-                kp = find_nearest(
-                    self.coordinates.get_axis_array("theta"), np.pi / 2 + theta
+                    )[:, km : kp + 1].sum(axis=1, dtype="float64")
+                ret_data = integral.reshape(self.shape[0], self.shape[1], 1)
+            case Geometry.SPHERICAL:
+                ret_coords = Coordinates(
+                    self.native_geometry,
+                    self.coordinates.get_axis_array("r"),
+                    find_around(
+                        self.coordinates.get_axis_array("theta"),
+                        self.coordinates.get_axis_array_med("theta")[imid],
+                    ),
+                    self.coordinates.get_axis_array("phi"),
                 )
                 km = find_nearest(
-                    self.coordinates.get_axis_array("theta"), np.pi / 2 - theta
+                    self.coordinates.get_axis_array("theta"),
+                    self.coordinates.get_axis_array("theta").min(),
                 )
-            ret_data = (
-                np.sum(
+                kp = find_nearest(
+                    self.coordinates.get_axis_array("theta"),
+                    self.coordinates.get_axis_array("theta").max(),
+                )
+                if theta is not None:
+                    kp = find_nearest(
+                        self.coordinates.get_axis_array("theta"), np.pi / 2 + theta
+                    )
+                    km = find_nearest(
+                        self.coordinates.get_axis_array("theta"), np.pi / 2 - theta
+                    )
+                ret_data = (
                     (
                         self.data
                         * self.coordinates.get_axis_array_med("r")[:, None, None]
@@ -683,13 +673,12 @@ class GasField(Generic[D, F]):
                         * np.ediff1d(self.coordinates.get_axis_array("theta"))[
                             None, :, None
                         ]
-                    )[:, km : kp + 1, :],
-                    axis=1,
-                    dtype="float64",
+                    )[:, km : kp + 1, :]
+                    .sum(axis=1, dtype="float64")
+                    .reshape(self.shape[0], 1, self.shape[2])
                 )
-            ).reshape(self.shape[0], 1, self.shape[2])
-        else:
-            assert_never(self.native_geometry)
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -710,51 +699,50 @@ class GasField(Generic[D, F]):
         )
 
         imid = self.find_imid()
-        if self.native_geometry is Geometry.CARTESIAN:
-            zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            km = find_nearest(zmed, zarr.min())
-            kp = find_nearest(zmed, zarr.max())
-            if z is not None:
-                km = find_nearest(zmed, -z)
-                kp = find_nearest(zmed, z)
-            ret_data = (
-                np.nansum(
-                    (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
-                    axis=2,
-                    dtype="float64",
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-            ).reshape(self.shape[0], self.shape[1], 1)
-        elif self.native_geometry is Geometry.POLAR:
-            zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            km = find_nearest(zmed, zarr.min())
-            kp = find_nearest(zmed, zarr.max())
-            if z is not None:
-                km = find_nearest(zmed, -z)
-                kp = find_nearest(zmed, z)
-            ret_data = (
-                np.nansum(
-                    (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
-                    axis=2,
-                    dtype="float64",
+                km = find_nearest(zmed, zarr.min())
+                kp = find_nearest(zmed, zarr.max())
+                if z is not None:
+                    km = find_nearest(zmed, -z)
+                    kp = find_nearest(zmed, z)
+                ret_data = (
+                    np.nansum(
+                        (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
+                        axis=2,
+                        dtype="float64",
+                    )
+                ).reshape(self.shape[0], self.shape[1], 1)
+            case Geometry.POLAR:
+                zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-            ).reshape(self.shape[0], self.shape[1], 1)
-        elif self.native_geometry is Geometry.SPHERICAL:
-            raise NotImplementedError(
-                """
-                vertical_projection(z) function not implemented in spherical coordinates.\n
-                Maybe you could use the function latitudinal_projection(theta)?
-                """
-            )
-        else:
-            assert_never(self.native_geometry)
+                km = find_nearest(zmed, zarr.min())
+                kp = find_nearest(zmed, zarr.max())
+                if z is not None:
+                    km = find_nearest(zmed, -z)
+                    kp = find_nearest(zmed, z)
+                ret_data = (
+                    np.nansum(
+                        (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
+                        axis=2,
+                        dtype="float64",
+                    )
+                ).reshape(self.shape[0], self.shape[1], 1)
+            case Geometry.SPHERICAL:
+                raise NotImplementedError(
+                    "vertical_projection(z) function not implemented in spherical coordinates.\n"
+                    "Maybe you could use the function latitudinal_projection(theta)?"
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -771,28 +759,35 @@ class GasField(Generic[D, F]):
             operation_name=operation_name,
         )
         imid = self.find_imid()
-        if self.native_geometry is Geometry.CARTESIAN:
-            # find_around looks around the 2 coords values that surround coordmed at imid
-            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            ret_data = self.data[:, :, imid].reshape(self.shape[0], self.shape[1], 1)
-            # do geometry conversion!!! -> chainer la conversion (une fois que reduction de dimension -> conversion puis plot egalement chainable)
-        elif self.native_geometry is Geometry.POLAR:
-            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            ret_data = self.data[:, :, imid].reshape(self.shape[0], self.shape[1], 1)
-        elif self.native_geometry is Geometry.SPHERICAL:
-            thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
-            ret_coords = self.coordinates.project_along(
-                Axis.COLATITUDE, thetamed[imid].item()
-            )
-            ret_data = self.data[:, imid, :].reshape(self.shape[0], 1, self.shape[2])
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                # find_around looks around the 2 coords values that surround coordmed at imid
+                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
+                )
+                ret_data = self.data[:, :, imid].reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+                # do geometry conversion!!! -> chainer la conversion (une fois que reduction de dimension -> conversion puis plot egalement chainable)
+            case Geometry.POLAR:
+                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
+                )
+                ret_data = self.data[:, :, imid].reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+            case Geometry.SPHERICAL:
+                thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
+                ret_coords = self.coordinates.project_along(
+                    Axis.COLATITUDE, thetamed[imid].item()
+                )
+                ret_data = self.data[:, imid, :].reshape(
+                    self.shape[0], 1, self.shape[2]
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -810,40 +805,41 @@ class GasField(Generic[D, F]):
         )
 
         imid = self.find_imid(altitude=theta)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                "latitudinal_at_theta is not implemented for cartesian geometry"
-            )
-        if self.native_geometry is Geometry.POLAR:
-            data_at_theta = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
-            zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-            R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
-            for i in range(self.shape[0]):
-                iz0 = find_nearest(zmed, R[i] / np.tan(np.pi / 2 - theta))
-                if np.sign(theta) >= 0:
-                    if iz0 < self.shape[2]:
-                        data_at_theta[i, :] = self.data[i, :, iz0]
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    "latitudinal_at_theta is not implemented for cartesian geometry"
+                )
+            case Geometry.POLAR:
+                data_at_theta = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
+                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
+                R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
+                for i in range(self.shape[0]):
+                    iz0 = find_nearest(zmed, R[i] / np.tan(np.pi / 2 - theta))
+                    if np.sign(theta) >= 0:
+                        if iz0 < self.shape[2]:
+                            data_at_theta[i, :] = self.data[i, :, iz0]
+                        else:
+                            data_at_theta[i, :] = np.nan
                     else:
-                        data_at_theta[i, :] = np.nan
-                else:
-                    if iz0 > 0:
-                        data_at_theta[i, :] = self.data[i, :, iz0]
-                    else:
-                        data_at_theta[i, :] = np.nan
-            ret_data = data_at_theta.reshape(self.shape[0], self.shape[1], 1)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
-            ret_coords = self.coordinates.project_along(
-                Axis.COLATITUDE, thetamed[imid].item()
-            )
-            ret_data = self.data[
-                :, find_nearest(thetamed, np.pi / 2 - theta), :
-            ].reshape(self.shape[0], 1, self.shape[2])
-        else:
-            assert_never(self.native_geometry)
+                        if iz0 > 0:
+                            data_at_theta[i, :] = self.data[i, :, iz0]
+                        else:
+                            data_at_theta[i, :] = np.nan
+                ret_data = data_at_theta.reshape(self.shape[0], self.shape[1], 1)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
+                )
+            case Geometry.SPHERICAL:
+                thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
+                ret_coords = self.coordinates.project_along(
+                    Axis.COLATITUDE, thetamed[imid].item()
+                )
+                ret_data = self.data[
+                    :, find_nearest(thetamed, np.pi / 2 - theta), :
+                ].reshape(self.shape[0], 1, self.shape[2])
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -860,28 +856,29 @@ class GasField(Generic[D, F]):
             operation_name=operation_name,
         )
         imid = self.find_imid(altitude=z)
-        if self.native_geometry is Geometry.CARTESIAN:
-            zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
-                self.shape[0], self.shape[1], 1
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-            ret_coords = self.coordinates.project_along(
-                Axis.CARTESIAN_Z, zmed[imid].item()
-            )
-            ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
-                self.shape[0], self.shape[1], 1
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            raise NotImplementedError(
-                "vertical at z in spherical coordinates not implemented yet."
-            )
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
+                )
+                ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+            case Geometry.POLAR:
+                zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CARTESIAN_Z, zmed[imid].item()
+                )
+                ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+            case Geometry.SPHERICAL:
+                raise NotImplementedError(
+                    "vertical at z in spherical coordinates not implemented yet."
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -898,24 +895,29 @@ class GasField(Generic[D, F]):
             operation_name=operation_name,
         )
         iphi = self.find_iphi(phi=phi)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_at_phi"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
-            ret_coords = self.coordinates.project_along(
-                Axis.AZIMUTH, phimed[iphi].item()
-            )
-            ret_data = self.data[:, iphi, :].reshape(self.shape[0], 1, self.shape[2])
-        elif self.native_geometry is Geometry.SPHERICAL:
-            phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
-            ret_coords = self.coordinates.project_along(
-                Axis.AZIMUTH, phimed[iphi].item()
-            )
-            ret_data = self.data[:, :, iphi].reshape(self.shape[0], self.shape[1], 1)
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_at_phi"
+                )
+            case Geometry.POLAR:
+                phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
+                ret_coords = self.coordinates.project_along(
+                    Axis.AZIMUTH, phimed[iphi].item()
+                )
+                ret_data = self.data[:, iphi, :].reshape(
+                    self.shape[0], 1, self.shape[2]
+                )
+            case Geometry.SPHERICAL:
+                phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
+                ret_coords = self.coordinates.project_along(
+                    Axis.AZIMUTH, phimed[iphi].item()
+                )
+                ret_data = self.data[:, :, iphi].reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -955,28 +957,29 @@ class GasField(Generic[D, F]):
         )
 
         iphi = self.find_iphi(phi=0)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
-            ret_coords = self.coordinates.project_along(
-                Axis.AZIMUTH, phimed[iphi].item()
-            )
-            ret_data = np.nanmean(self.data, axis=1, dtype="float64").reshape(
-                self.shape[0], 1, self.shape[2]
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
-            ret_coords = self.coordinates.project_along(
-                Axis.AZIMUTH, phimed[iphi].item()
-            )
-            ret_data = np.nanmean(self.data, axis=2, dtype="float64").reshape(
-                self.shape[0], self.shape[1], 1
-            )
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average"
+                )
+            case Geometry.POLAR:
+                phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
+                ret_coords = self.coordinates.project_along(
+                    Axis.AZIMUTH, phimed[iphi].item()
+                )
+                ret_data = np.nanmean(self.data, axis=1, dtype="float64").reshape(
+                    self.shape[0], 1, self.shape[2]
+                )
+            case Geometry.SPHERICAL:
+                phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
+                ret_coords = self.coordinates.project_along(
+                    Axis.AZIMUTH, phimed[iphi].item()
+                )
+                ret_data = np.nanmean(self.data, axis=2, dtype="float64").reshape(
+                    self.shape[0], self.shape[1], 1
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -1007,34 +1010,35 @@ class GasField(Generic[D, F]):
         rhill = self.find_rhill(planet_file=planet_file)
         iphip_m = self.find_iphi(phi=phip - 2 * rhill / rp)
         iphip_p = self.find_iphi(phi=phip + 2 * rhill / rp)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average_except_planet_hill"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            ret_coords = self.coordinates
-            ret_data = self.data.copy()
-            if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[1]:
-                ret_data[:, iphip_m : iphip_p + 1, :] = np.nan
-            else:
-                if iphip_p == self.coordinates.shape[1]:
-                    ret_data[:, iphip_m:iphip_p, :] = np.nan
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average_except_planet_hill"
+                )
+            case Geometry.POLAR:
+                ret_coords = self.coordinates
+                ret_data = self.data.copy()
+                if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[1]:
+                    ret_data[:, iphip_m : iphip_p + 1, :] = np.nan
                 else:
-                    ret_data[:, 0 : iphip_p + 1, :] = np.nan
-                    ret_data[:, iphip_m : self.coordinates.shape[1], :] = np.nan
-        elif self.native_geometry is Geometry.SPHERICAL:
-            ret_coords = self.coordinates
-            ret_data = self.data.copy()
-            if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[2]:
-                ret_data[:, :, iphip_m : iphip_p + 1] = np.nan
-            else:
-                if iphip_p == self.coordinates.shape[2]:
-                    ret_data[:, :, iphip_m:iphip_p] = np.nan
+                    if iphip_p == self.coordinates.shape[1]:
+                        ret_data[:, iphip_m:iphip_p, :] = np.nan
+                    else:
+                        ret_data[:, 0 : iphip_p + 1, :] = np.nan
+                        ret_data[:, iphip_m : self.coordinates.shape[1], :] = np.nan
+            case Geometry.SPHERICAL:
+                ret_coords = self.coordinates
+                ret_data = self.data.copy()
+                if iphip_p >= iphip_m and iphip_p != self.coordinates.shape[2]:
+                    ret_data[:, :, iphip_m : iphip_p + 1] = np.nan
                 else:
-                    ret_data[:, :, 0 : iphip_p + 1] = np.nan
-                    ret_data[:, :, iphip_m : self.coordinates.shape[2]] = np.nan
-        else:
-            assert_never(self.native_geometry)
+                    if iphip_p == self.coordinates.shape[2]:
+                        ret_data[:, :, iphip_m:iphip_p] = np.nan
+                    else:
+                        ret_data[:, :, 0 : iphip_p + 1] = np.nan
+                        ret_data[:, :, iphip_m : self.coordinates.shape[2]] = np.nan
+            case _ as unreachable:
+                assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype("float32", copy=False),
@@ -1052,22 +1056,23 @@ class GasField(Generic[D, F]):
         )
 
         ir1 = self.find_ir(distance=distance)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
-            ret_coords = self.coordinates.project_along(
-                Axis.CYLINDRICAL_RADIUS, rmed[ir1].item()
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
-            ret_coords = self.coordinates.project_along(
-                Axis.SPHERICAL_RADIUS, rmed[ir1].item()
-            )
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
+                )
+            case Geometry.POLAR:
+                rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CYLINDRICAL_RADIUS, rmed[ir1].item()
+                )
+            case Geometry.SPHERICAL:
+                rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
+                ret_coords = self.coordinates.project_along(
+                    Axis.SPHERICAL_RADIUS, rmed[ir1].item()
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
         return self.replace(
@@ -1093,32 +1098,33 @@ class GasField(Generic[D, F]):
         irmin = self.find_ir(distance=vmin)
         irmax = self.find_ir(distance=vmax)
         ir = self.find_ir(distance=(vmax - vmin) / 2)
-        if self.native_geometry is Geometry.CARTESIAN:
-            raise NotImplementedError(
-                f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
-            )
-        elif self.native_geometry is Geometry.POLAR:
-            R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
-            if vmin is None:
-                vmin = R.min()
-            if vmax is None:
-                vmax = R.max()
-            Rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
-            ret_coords = self.coordinates.project_along(
-                Axis.CYLINDRICAL_RADIUS, Rmed[ir].item()
-            )
-        elif self.native_geometry is Geometry.SPHERICAL:
-            r = self.coordinates.get_axis_array(Axis.SPHERICAL_RADIUS)
-            if vmin is None:
-                vmin = r.min()
-            if vmax is None:
-                vmax = r.max()
-            rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
-            ret_coords = self.coordinates.project_along(
-                Axis.SPHERICAL_RADIUS, rmed[ir].item()
-            )
-        else:
-            assert_never(self.native_geometry)
+        match self.native_geometry:
+            case Geometry.CARTESIAN:
+                raise NotImplementedError(
+                    f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
+                )
+            case Geometry.POLAR:
+                R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
+                if vmin is None:
+                    vmin = R.min()
+                if vmax is None:
+                    vmax = R.max()
+                Rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
+                ret_coords = self.coordinates.project_along(
+                    Axis.CYLINDRICAL_RADIUS, Rmed[ir].item()
+                )
+            case Geometry.SPHERICAL:
+                r = self.coordinates.get_axis_array(Axis.SPHERICAL_RADIUS)
+                if vmin is None:
+                    vmin = r.min()
+                if vmax is None:
+                    vmax = r.max()
+                rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
+                ret_coords = self.coordinates.project_along(
+                    Axis.SPHERICAL_RADIUS, rmed[ir].item()
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
         ret_data = np.nanmean(
             self.data[irmin : irmax + 1, :, :], axis=0, dtype="float64"
@@ -1171,14 +1177,15 @@ class GasField(Generic[D, F]):
             if abs(0 - phicoord[ipi]) > abs(np.ediff1d(find_around(phicoord, 0))[0]):
                 ipi = find_nearest(phicoord, 2 * np.pi)
 
-            if self.native_geometry is Geometry.POLAR:
-                ret_data = np.roll(self.data, -ipi + 1, axis=1)
-            elif self.native_geometry is Geometry.SPHERICAL:
-                ret_data = np.roll(self.data, -ipi + 1, axis=2)
-            else:
-                raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
-                )
+            match self.native_geometry:
+                case Geometry.POLAR:
+                    ret_data = np.roll(self.data, -ipi + 1, axis=1)
+                case Geometry.SPHERICAL:
+                    ret_data = np.roll(self.data, -ipi + 1, axis=2)
+                case _:
+                    raise NotImplementedError(
+                        f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                    )
         else:
             ret_data = self.data
 

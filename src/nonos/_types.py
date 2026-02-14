@@ -131,33 +131,34 @@ class PlanetData(Generic[F]):
         object.__setattr__(self, "d", np.sqrt(self.x**2 + self.y**2 + self.z**2))
 
     def get_orbital_elements(self, frame: FrameType) -> OrbitalElements:
-        if frame is FrameType.FIXED_FRAME:
-            hx = self.y * self.vz - self.z * self.vy
-            hy = self.z * self.vx - self.x * self.vz
-            hz = self.x * self.vy - self.y * self.vx
-            hhor = np.hypot(hx, hy)
+        match frame:
+            case FrameType.FIXED_FRAME:
+                hx = self.y * self.vz - self.z * self.vy
+                hy = self.z * self.vx - self.x * self.vz
+                hz = self.x * self.vy - self.y * self.vx
+                hhor = np.hypot(hx, hy)
 
-            h2 = hx * hx + hy * hy + hz * hz
-            h = np.sqrt(h2)
-            i = np.arcsin(hhor / h)
+                h2 = hx * hx + hy * hy + hz * hz
+                h = np.sqrt(h2)
+                i = np.arcsin(hhor / h)
 
-            d = object.__getattribute__(self, "d")
-            Ax = self.vy * hz - self.vz * hy - (1.0 + self.q) * self.x / d
-            Ay = self.vz * hx - self.vx * hz - (1.0 + self.q) * self.y / d
-            Az = self.vx * hy - self.vy * hx - (1.0 + self.q) * self.z / d
+                d = object.__getattribute__(self, "d")
+                Ax = self.vy * hz - self.vz * hy - (1.0 + self.q) * self.x / d
+                Ay = self.vz * hx - self.vx * hz - (1.0 + self.q) * self.y / d
+                Az = self.vx * hy - self.vy * hx - (1.0 + self.q) * self.z / d
 
-            e = np.sqrt(Ax * Ax + Ay * Ay + Az * Az) / (1.0 + self.q)
-            a = h * h / ((1.0 + self.q) * (1.0 - e * e))
-            return OrbitalElements(i, e, a)
-        elif frame is FrameType.CONSTANT_ROTATION:
-            raise NotImplementedError(
-                f"PlanetData.set_orbital_elements isn't implemented for {frame=}"
-            )
-        elif frame is FrameType.PLANET_COROTATION:
-            # bug-for-bug compat
-            return self.get_orbital_elements(FrameType.FIXED_FRAME)
-        else:
-            assert_never(frame)
+                e = np.sqrt(Ax * Ax + Ay * Ay + Az * Az) / (1.0 + self.q)
+                a = h * h / ((1.0 + self.q) * (1.0 - e * e))
+                return OrbitalElements(i, e, a)
+            case FrameType.CONSTANT_ROTATION:
+                raise NotImplementedError(
+                    f"PlanetData.set_orbital_elements isn't implemented for {frame=}"
+                )
+            case FrameType.PLANET_COROTATION:
+                # bug-for-bug compat
+                return self.get_orbital_elements(FrameType.FIXED_FRAME)
+            case _ as unreachable:
+                assert_never(unreachable)
 
     def get_rotational_rate(self) -> FArray1D[F]:
         d = self.d  # type: ignore [attr-defined]
