@@ -90,7 +90,7 @@ class NonosLick(Generic[F]):
         method: InterpMethod = "linear",
         method_background: InterpMethod = "nearest",
         light_source: bool = True,
-    ):
+    ) -> None:
         if find_spec("lick") is None:
             raise RuntimeError(
                 "NonosLick cannot be instantiated because lick is not installed"

@@ -604,7 +604,7 @@ class Fargo3DReader:
         else:
             raise NotImplementedError(f"Geometry {geometry_str!r} is not supported")
 
-        def _read_array(file: Path):
+        def _read_array(file: Path) -> FloatArray:
             return np.roll(
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)

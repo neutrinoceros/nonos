@@ -89,14 +89,14 @@ class Plotable(Generic[D, F]):
         fig: "Figure",
         ax: "Axes",
         *,
-        log=False,
+        log: bool = False,
         cmap: str | None = "inferno",
-        filename=None,
-        fmt="png",
-        dpi=500,
-        title=None,
-        unit_conversion=None,
-        nbin=None,  # deprecated
+        filename: str | None = None,
+        fmt: str = "png",
+        dpi: int = 500,
+        title: str | None = None,
+        unit_conversion: float | None = None,
+        nbin: int | None = None,  # deprecated
         **kwargs,
     ) -> "Artist":
         if nbin is not None:
@@ -420,7 +420,7 @@ class GasField(Generic[D, F]):
             else:
                 data_view = self.data.view()
 
-            def rotate_axes(arr, shift: int):
+            def rotate_axes(arr: FArray[D, F], shift: int) -> FArray[D, F]:
                 axes_in = tuple(range(arr.ndim))
                 axes_out = deque(axes_in)
                 axes_out.rotate(shift)
@@ -491,7 +491,7 @@ class GasField(Generic[D, F]):
 
         return file
 
-    def find_ir(self, distance: float = 1.0):
+    def find_ir(self, distance: float = 1.0) -> int:
         if self.native_geometry is Geometry.POLAR:
             return find_nearest(
                 self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS), distance
@@ -505,7 +505,7 @@ class GasField(Generic[D, F]):
         else:
             assert_never(self.native_geometry)
 
-    def find_imid(self, altitude: float = 0.0):
+    def find_imid(self, altitude: float = 0.0) -> int:
         if (
             self.native_geometry is Geometry.CARTESIAN
             or self.native_geometry is Geometry.POLAR
@@ -518,7 +518,7 @@ class GasField(Generic[D, F]):
         else:
             assert_never(self.native_geometry)
 
-    def find_iphi(self, phi: float = 0):
+    def find_iphi(self, phi: float = 0) -> int:
         if (
             self.native_geometry is Geometry.POLAR
             or self.native_geometry is Geometry.SPHERICAL
@@ -543,7 +543,7 @@ class GasField(Generic[D, F]):
         file = self.loader.parameter_file.parent / planet_file
         return self.loader.load_planet_data(file)
 
-    def _get_ind_output_number(self, time) -> int:
+    def _get_ind_output_number(self, time: FArray1D[F]) -> int:
         return _get_ind_output_number(self.loader, self.output_number, time)
 
     def find_rp(
@@ -599,7 +599,7 @@ class GasField(Generic[D, F]):
             return suffix
 
     def latitudinal_projection(
-        self, theta=None, *, operation_name=None
+        self, theta: float | None = None, *, operation_name: str | None = None
     ) -> "GasField[D, F]":
         default_suffix = "latitudinal_projection"
         if theta is not None:
@@ -697,7 +697,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def vertical_projection(self, z=None, *, operation_name=None) -> "GasField[D, F]":
+    def vertical_projection(
+        self, z: float | None = None, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         default_suffix = "vertical_projection"
         if z is not None:
             default_suffix += str(z)
@@ -760,7 +762,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def vertical_at_midplane(self, *, operation_name=None) -> "GasField[D, F]":
+    def vertical_at_midplane(
+        self, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="vertical_at_midplane",
@@ -796,7 +800,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def latitudinal_at_theta(self, theta=0.0, *, operation_name=None) -> "GasField":
+    def latitudinal_at_theta(
+        self, theta: float = 0.0, *, operation_name: str | None = None
+    ) -> "GasField":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
@@ -845,7 +851,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def vertical_at_z(self, z=0.0, *, operation_name=None) -> "GasField[D, F]":
+    def vertical_at_z(
+        self, z=0.0, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"vertical_at_z{z}",
@@ -881,7 +889,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def azimuthal_at_phi(self, phi=0.0, *, operation_name=None) -> "GasField[D, F]":
+    def azimuthal_at_phi(
+        self, phi: float = 0.0, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"azimuthal_at_phi{phi}",
@@ -918,7 +928,7 @@ class GasField(Generic[D, F]):
         planet_number: int | None = None,
         *,
         planet_file: str | None = None,
-        operation_name=None,
+        operation_name: str | None = None,
     ) -> "GasField":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
@@ -935,7 +945,9 @@ class GasField(Generic[D, F]):
         aziphip = self.azimuthal_at_phi(phi=phip)
         return aziphip.replace(operation=operation)
 
-    def azimuthal_average(self, *, operation_name=None) -> "GasField[D, F]":
+    def azimuthal_average(
+        self, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="azimuthal_average",
@@ -977,7 +989,7 @@ class GasField(Generic[D, F]):
         planet_number: int | None = None,
         *,
         planet_file: str | None = None,
-        operation_name=None,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
@@ -1030,7 +1042,9 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def radial_at_r(self, distance=1.0, *, operation_name=None) -> "GasField[D, F]":
+    def radial_at_r(
+        self, distance=1.0, *, operation_name: str | None = None
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"radial_at_r{distance}",
@@ -1063,7 +1077,7 @@ class GasField(Generic[D, F]):
         )
 
     def radial_average_interval(
-        self, vmin=None, vmax=None, *, operation_name=None
+        self, vmin=None, vmax=None, *, operation_name: str | None = None
     ) -> "GasField[D, F]":
         if (vmin is None) or (vmax is None):
             raise ValueError(
@@ -1115,7 +1129,7 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def diff(self, on_2) -> "GasField[D, F]":
+    def diff(self, on_2: int) -> "GasField[D, F]":
         ds_2 = GasDataSet(
             on_2,
             geometry=self.native_geometry,
@@ -1316,7 +1330,7 @@ class GasDataSet(Generic[D, F]):
     def coords(self) -> Coordinates[F]:
         return self.coordinates
 
-    def __getitem__(self, key) -> "GasField[D, F]":
+    def __getitem__(self, key: str) -> "GasField[D, F]":
         if key in self.dict:
             return self.dict[key]
         else:

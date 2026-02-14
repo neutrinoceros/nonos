@@ -1,13 +1,15 @@
 import numpy as np
 
+from nonos._types import D, F, FArray
 
-def find_nearest(array, value):
+
+def find_nearest(array: FArray[D, F], value: float | F) -> int:
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
-    return idx
+    return int(idx)
 
 
-def find_around(array, value):
+def find_around(array: FArray[D, F], value: float | F) -> FArray[D, F]:
     array = np.asarray(array)
     idx_1 = (np.abs(array - value)).argmin()
     larray = list(array)
