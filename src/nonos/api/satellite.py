@@ -39,7 +39,7 @@ def file_analysis(
 
     columns = np.loadtxt(directory / filename, dtype="float64").T
     if norb is None:
-        return columns
+        return columns  # type: ignore[no-any-return]
 
     loader = loader_from(
         code=code,
@@ -66,7 +66,7 @@ def file_analysis(
         raise NotImplementedError(
             f"moving average on {norb} orbits is not implemented for the recipe {recipe}"
         )
-    return columns
+    return columns  # type: ignore[no-any-return]
 
 
 InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]

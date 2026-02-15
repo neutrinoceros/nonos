@@ -681,7 +681,7 @@ class FargoADSGReader:
         grid_shape = n3, n1, n2
 
         def _read_array(file: Path) -> FloatArray:
-            return (
+            return (  # type: ignore[no-any-return]
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)
                 .transpose(1, 2, 0)

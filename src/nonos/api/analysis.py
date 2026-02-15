@@ -209,7 +209,7 @@ def _find_planet_azimuth(
     data_dir = loader.parameter_file.parent
     pd = loader.planet_reader.read(data_dir / planet_file)
     ind_on = _get_ind_output_number(loader, output_number, pd.t)
-    return np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi)
+    return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
 
 class GasFieldAttrs(Generic[D, F], TypedDict, total=False):
@@ -570,7 +570,7 @@ class GasField(Generic[D, F]):
     ) -> float:
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         ind_on = self._get_ind_output_number(pd.t)
-        return pd.d[ind_on]  # type: ignore [attr-defined]
+        return float(pd.d[ind_on])  # type: ignore [attr-defined]
 
     def find_rhill(
         self,
@@ -582,7 +582,7 @@ class GasField(Generic[D, F]):
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         oe = pd.get_orbital_elements(ini.frame)
         ind_on = self._get_ind_output_number(pd.t)
-        return pow(pd.q[ind_on] / 3.0, 1.0 / 3.0) * oe.a[ind_on]
+        return float(pd.q[ind_on] / 3.0 ** (1 / 3) * oe.a[ind_on])
 
     def find_phip(
         self,
