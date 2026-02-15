@@ -7,13 +7,14 @@ import json
 import os
 import re
 import sys
+from io import BufferedReader
 from pathlib import Path
 from typing import Any, final
 
 import numpy as np
 
 from nonos._geometry import Geometry
-from nonos._types import BinData, FloatArray
+from nonos._types import BinData, F, FArray1D, FloatArray
 
 if sys.version_info >= (3, 11):
     from typing import assert_never
@@ -23,6 +24,18 @@ if sys.version_info >= (3, 13):
     from copy import replace
 else:
     from dataclasses import replace
+
+
+def load_from_fid(
+    fid: BufferedReader, /, *, dtype: np.dtype, count: int, lazy: bool = True
+) -> FArray1D[F]:
+    if lazy:
+        offset = fid.tell()
+        retv = np.memmap(fid, mode="r", dtype=dtype, offset=offset, shape=count)
+        fid.seek(offset + dtype.itemsize * count, os.SEEK_SET)
+        return retv
+    else:
+        return np.fromfile(fid, dtype, count=count)
 
 
 @final
@@ -165,36 +178,15 @@ class VTKReader:
 
         if V.geometry is Geometry.CARTESIAN:
             s = fid.readline()  # X_COORDINATES NX float
-            # we store the file pointer position before computing points
-            inipos = fid.tell()
-            # some smart memory efficient way to store the array
-            x = np.memmap(fid, mode="r", dtype=dt, offset=inipos, shape=n1)
-            # we calculate the offset that we would expect normally with a np.fromfile
-            newpos = dt.itemsize * n1 + inipos
-            # we set the file pointer position to this offset
-            fid.seek(newpos, os.SEEK_SET)
+            x = load_from_fid(fid, dtype=dt, count=n1)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Y_COORDINATES NY float
-            # we store the file pointer position before computing points
-            inipos = fid.tell()
-            # some smart memory efficient way to store the array
-            y = np.memmap(fid, mode="r", dtype=dt, offset=inipos, shape=n2)
-            # we calculate the offset that we would expect normally with a np.fromfile
-            newpos = dt.itemsize * n2 + inipos
-            # we set the file pointer position to this offset
-            fid.seek(newpos, os.SEEK_SET)
+            y = load_from_fid(fid, dtype=dt, count=n2)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Z_COORDINATES NZ float
-            # we store the file pointer position before computing points
-            inipos = fid.tell()
-            # some smart memory efficient way to store the array
-            z = np.memmap(fid, mode="r", dtype=dt, offset=inipos, shape=n3)
-            # we calculate the offset that we would expect normally with a np.fromfile
-            newpos = dt.itemsize * 1 * n3 + inipos
-            # we set the file pointer position to this offset
-            fid.seek(newpos, os.SEEK_SET)
+            z = load_from_fid(fid, dtype=dt, count=n3)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # POINT_DATA NXNYNZ
@@ -247,18 +239,7 @@ class VTKReader:
             s = fid.readline()  # POINTS NXNYNZ float
             slist = s.split()
             npoints = int(slist[1])
-
-            # we store the file pointer position before computing points
-            inipos = fid.tell()
-
-            # some smart memory efficient way to store the array
-            points = np.memmap(
-                fid, mode="r", dtype=dt, offset=inipos, shape=3 * npoints
-            )
-            # we calculate the offset that we would expect normally with a np.fromfile
-            newpos = dt.itemsize * 3 * npoints + inipos
-            # we set the file pointer position to this offset
-            fid.seek(newpos, os.SEEK_SET)
+            points = load_from_fid(fid, dtype=dt, count=3 * npoints)
             s = fid.readline()  # EXTRA LINE FEED
 
             if (grid_size := n1 * n2 * n3) != npoints:  # pragma: no cover
@@ -413,32 +394,14 @@ class VTKReader:
                 varname = slist[1].decode("utf-8").upper()
                 if datatype == "SCALARS":
                     fid.readline()  # LOOKUP TABLE
-
-                    # we store the file pointer position before computing points
-                    inipos = fid.tell()
-
-                    # some smart memory efficient way to store the array
-                    array = np.memmap(
-                        fid, mode="r", dtype=dt, offset=inipos, shape=grid_size
+                    array = load_from_fid(
+                        fid,
+                        dtype=dt,
+                        count=grid_size,
                     ).reshape(new_shape)
-                    # we calculate the offset that we would expect normally with a np.fromfile
-                    newpos = inipos + dt.itemsize * grid_size
-                    # we set the file pointer position to this offset
-                    fid.seek(newpos, os.SEEK_SET)
-
                     V.data[varname] = np.transpose(array)
                 elif datatype == "VECTORS":
-                    # we store the file pointer position before computing points
-                    inipos = fid.tell()
-                    nelements = 3 * grid_size
-                    # some smart memory efficient way to store the array
-                    Q = np.memmap(
-                        fid, mode="r", dtype=dt, offset=inipos, shape=nelements
-                    )
-                    # we calculate the offset that we would expect normally with a np.fromfile
-                    newpos = inipos + dt.itemsize * nelements
-                    # we set the file pointer position to this offset
-                    fid.seek(newpos, os.SEEK_SET)
+                    Q = load_from_fid(fid, dtype=dt, count=3 * grid_size)
 
                     for i, suffix in enumerate("XYZ"):
                         name = f"{varname}_{suffix}"
