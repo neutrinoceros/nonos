@@ -193,7 +193,7 @@ class Plotable(Generic[D, F]):
 
 
 def _get_ind_output_number(
-    loader: Loader, output_number: int, time: FArray1D[F]
+    loader: Loader[F], output_number: int, time: FArray1D[F]
 ) -> int:
     ini = loader.load_ini_file()
     target_time = ini.output_time_interval * output_number
@@ -201,7 +201,7 @@ def _get_ind_output_number(
 
 
 def _find_planet_azimuth(
-    loader: Loader,
+    loader: Loader[F],
     output_number: int,
     *,
     planet_file: str,
@@ -230,7 +230,7 @@ class GasField(Generic[D, F]):
     coordinates: Coordinates[F]
     native_geometry: Geometry
     output_number: int
-    loader: Loader
+    loader: Loader[F]
     operation: str = ""
     rotate_by: float = 0.0
 
@@ -325,7 +325,7 @@ class GasField(Generic[D, F]):
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField":
+    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField[D, F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -827,7 +827,7 @@ class GasField(Generic[D, F]):
         theta: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField":
+    ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
@@ -967,7 +967,7 @@ class GasField(Generic[D, F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "GasField":
+    ) -> "GasField[D, F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )

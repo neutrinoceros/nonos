@@ -130,7 +130,7 @@ class PlanetData(Generic[F]):
     def __post_init__(self) -> None:
         object.__setattr__(self, "d", np.sqrt(self.x**2 + self.y**2 + self.z**2))
 
-    def get_orbital_elements(self, frame: FrameType) -> OrbitalElements:
+    def get_orbital_elements(self, frame: FrameType) -> OrbitalElements[F]:
         match frame:
             case FrameType.FIXED_FRAME:
                 hx = self.y * self.vz - self.z * self.vy

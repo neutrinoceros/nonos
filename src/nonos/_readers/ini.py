@@ -6,11 +6,13 @@ __all__ = [
 ]
 import os
 from pathlib import Path
-from typing import Any, final
+from typing import TypeAlias, final
 
 import inifix
 
 from nonos._types import FrameType, IniData, StrDict
+
+Scalar: TypeAlias = bool | int | float | str
 
 
 @final
@@ -18,11 +20,11 @@ class IdefixVTKReader:
     @staticmethod
     def read(file: os.PathLike[str], /) -> IniData:
         class IdefixIniOutput:
-            def __init__(self, *, vtk: list, **_: Any) -> None:
+            def __init__(self, *, vtk: list[Scalar], **_: object) -> None:
                 self.vtk = float(vtk[0])
 
         class IdefixIniHydro:
-            def __init__(self, rotation: list = [0.0]) -> None:  # noqa: B006
+            def __init__(self, rotation: list[Scalar]) -> None:  # noqa: B006
                 self.rotation = float(rotation[0])
                 if self.rotation != 0.0:
                     self.frame = FrameType.CONSTANT_ROTATION
@@ -30,7 +32,7 @@ class IdefixVTKReader:
                     self.frame = FrameType.FIXED_FRAME
 
         class IdefixIni:
-            def __init__(self, *, Hydro: StrDict, Output: StrDict, **_: Any) -> None:
+            def __init__(self, *, Hydro: StrDict, Output: StrDict, **_: object) -> None:
                 self.hydro = IdefixIniHydro(rotation=Hydro.get("rotation", [0.0]))
                 self.output = IdefixIniOutput(vtk=Output["vtk"])
 
@@ -51,11 +53,11 @@ class PlutoVTKReader:
     @staticmethod
     def read(file: os.PathLike[str], /) -> IniData:
         class PlutoIniOutput:
-            def __init__(self, *, vtk: list, **_: Any) -> None:
+            def __init__(self, *, vtk: list[Scalar], **_: object) -> None:
                 self.vtk = float(vtk[0])
 
         class PlutoIni:
-            def __init__(self, **kwargs: Any) -> None:
+            def __init__(self, **kwargs: dict[str, list[Scalar]]) -> None:
                 self.output = PlutoIniOutput(**kwargs["Static Grid Output"])
 
         meta = inifix.load(file, sections="require", parse_scalars_as_lists=True)
@@ -78,11 +80,11 @@ class Fargo3DReader:
             def __init__(
                 self,
                 *,
-                NINTERM: list,
-                DT: list,
-                FRAME: list = ["F"],  # noqa: B006
-                OMEGAFRAME: list = [0.0],  # noqa: B006
-                **_: Any,
+                NINTERM: list[Scalar],
+                DT: list[Scalar],
+                FRAME: list[Scalar] = ["F"],  # noqa: B006
+                OMEGAFRAME: list[Scalar] = [0.0],  # noqa: B006
+                **_: object,
             ) -> None:
                 self.NINTERM = int(NINTERM[0])
                 self.DT = float(DT[0])
@@ -122,11 +124,11 @@ class FargoADSGReader:
             def __init__(
                 self,
                 *,
-                Ninterm: list,
-                DT: list,
-                Frame: list = ["F"],  # noqa: B006
-                OmegaFrame: list = [0.0],  # noqa: B006
-                **_: Any,
+                Ninterm: list[Scalar],
+                DT: list[Scalar],
+                Frame: list[Scalar] = ["F"],  # noqa: B006
+                OmegaFrame: list[Scalar] = [0.0],  # noqa: B006
+                **_: object,
             ) -> None:
                 self.NINTERM = int(Ninterm[0])
                 self.DT = float(DT[0])
