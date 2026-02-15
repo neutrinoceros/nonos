@@ -131,7 +131,6 @@ python_version = "3.10"
 strict = true
 # temporary overrides to strict mode
 disallow_any_generics = false # 10 errors
-ignore_missing_imports = true
 
 # permanent overrides to strict mode
 # last checked, this only flagged Enum.__call__ used on final classes,,
