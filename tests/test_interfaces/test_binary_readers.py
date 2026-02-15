@@ -8,8 +8,9 @@ from nonos._readers.binary import NPYReader, VTKReader
 from nonos._types import BinData
 
 
-def test_bindata():
-    bd = BinData.default_init()
+@pytest.mark.parametrize("dtype", [np.dtype("float32"), np.dtype("float64")])
+def test_bindata(dtype):
+    bd = BinData.default_init(dtype=dtype)
     with pytest.raises(TypeError):
         bd.finalize()
 

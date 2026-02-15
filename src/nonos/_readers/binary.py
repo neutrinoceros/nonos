@@ -14,7 +14,7 @@ from typing import Any, final
 import numpy as np
 
 from nonos._geometry import Geometry
-from nonos._types import BinData, F, FArray1D, FloatArray
+from nonos._types import BinData, F, FArray, FArray1D, FArray3D
 
 if sys.version_info >= (3, 11):
     from typing import assert_never
@@ -24,6 +24,9 @@ if sys.version_info >= (3, 13):
     from copy import replace
 else:
     from dataclasses import replace
+
+f32 = np.float32
+f64 = np.float64
 
 
 def load_from_fid(
@@ -72,7 +75,7 @@ class VTKReader:
         return sorted(directory.glob("data.*.vtk"))
 
     @staticmethod
-    def read(file: str | os.PathLike[str], /, **meta: Any) -> BinData:
+    def read(file: str | os.PathLike[str], /, **meta: Any) -> BinData[f32]:
         """
         Adapted from Geoffroy Lesur
         Function that reads a vtk file in polar coordinates
@@ -85,7 +88,8 @@ class VTKReader:
         fid = open(file, "rb")
 
         # define our datastructure
-        V = BinData.default_init()
+        f32_be = np.dtype(">f")  # Big endian single precision floats
+        V = BinData.default_init(dtype=f32_be)
 
         # initialize geometry
         if meta["geometry"] is not None:
@@ -93,8 +97,6 @@ class VTKReader:
 
         native_coordinates = {}
 
-        # datatype we read
-        dt = np.dtype(">f")  # Big endian single precision floats
         dint = np.dtype(">i4")  # Big endian integer
 
         s = fid.readline()  # VTK DataFile Version x.x
@@ -115,7 +117,7 @@ class VTKReader:
                 entry = slist[0].decode("utf-8")
                 if entry == "TIME":
                     # skip
-                    fid.seek(dt.itemsize, os.SEEK_CUR)
+                    fid.seek(f32_be.itemsize, os.SEEK_CUR)
                 elif entry == "GEOMETRY":
                     g = np.fromfile(fid, dint, 1)
                     if g == 0:
@@ -151,7 +153,7 @@ class VTKReader:
                 elif VTKReader.NATIVE_COORDINATE_REGEXP.match(entry):
                     _ncomp, native_dim, _dtype = slist[1:]
                     native_coordinates[entry] = np.fromfile(
-                        fid, dtype=dt, count=int(native_dim)
+                        fid, dtype=f32_be, count=int(native_dim)
                     )
                 else:  # pragma: no cover
                     fid.close()
@@ -174,21 +176,25 @@ class VTKReader:
         n2 = int(slist[2])
         n3 = int(slist[3])
 
-        z: np.ndarray | np.memmap
+        x: FArray1D[f32]
+        y: FArray1D[f32]
+        z: FArray1D[f32]
+        r: FArray1D[f32]
+        theta: FArray1D[f32]
+        phi: FArray1D[f32]
 
         if V.geometry is Geometry.CARTESIAN:
             s = fid.readline()  # X_COORDINATES NX float
-            x = load_from_fid(fid, dtype=dt, count=n1)
+            x = load_from_fid(fid, dtype=f32_be, count=n1)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Y_COORDINATES NY float
-            y = load_from_fid(fid, dtype=dt, count=n2)
+            y = load_from_fid(fid, dtype=f32_be, count=n2)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Z_COORDINATES NZ float
-            z = load_from_fid(fid, dtype=dt, count=n3)
+            z = load_from_fid(fid, dtype=f32_be, count=n3)
             s = fid.readline()  # Extra line feed added by idefix
-
             s = fid.readline()  # POINT_DATA NXNYNZ
 
             slist = s.split()
@@ -239,7 +245,7 @@ class VTKReader:
             s = fid.readline()  # POINTS NXNYNZ float
             slist = s.split()
             npoints = int(slist[1])
-            points = load_from_fid(fid, dtype=dt, count=3 * npoints)
+            points = load_from_fid(fid, dtype=f32_be, count=3 * npoints)
             s = fid.readline()  # EXTRA LINE FEED
 
             if (grid_size := n1 * n2 * n3) != npoints:  # pragma: no cover
@@ -396,12 +402,12 @@ class VTKReader:
                     fid.readline()  # LOOKUP TABLE
                     array = load_from_fid(
                         fid,
-                        dtype=dt,
+                        dtype=f32_be,
                         count=grid_size,
                     ).reshape(new_shape)
                     V.data[varname] = np.transpose(array)
                 elif datatype == "VECTORS":
-                    Q = load_from_fid(fid, dtype=dt, count=3 * grid_size)
+                    Q = load_from_fid(fid, dtype=f32_be, count=3 * grid_size)
 
                     for i, suffix in enumerate("XYZ"):
                         name = f"{varname}_{suffix}"
@@ -513,7 +519,7 @@ class Fargo3DReader:
         file: os.PathLike[str],
         /,
         **meta: Any,
-    ) -> BinData:
+    ) -> BinData[f64]:
         output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
             file
         )
@@ -525,13 +531,13 @@ class Fargo3DReader:
         else:
             fluid = fluid_option
 
-        V = BinData.default_init()
+        V = BinData.default_init(dtype=np.dtype("float64"))
         geometry_str = meta["COORDINATES"]
 
-        domain_x = np.loadtxt(directory / "domain_x.dat")
+        domain_x = np.loadtxt(directory / "domain_x.dat", dtype="float64")
         # We avoid ghost cells
-        domain_y = np.loadtxt(directory / "domain_y.dat")[3:-3]
-        domain_z = np.loadtxt(directory / "domain_z.dat")
+        domain_y = np.loadtxt(directory / "domain_y.dat", dtype="float64")[3:-3]
+        domain_z = np.loadtxt(directory / "domain_z.dat", dtype="float64")
         if domain_z.shape[0] > 6:
             domain_z = domain_z[3:-3]
 
@@ -569,7 +575,7 @@ class Fargo3DReader:
         else:
             raise NotImplementedError(f"Geometry {geometry_str!r} is not supported")
 
-        def _read_array(file: Path) -> FloatArray:
+        def _read_array(file: Path) -> FArray3D[F]:
             return np.roll(
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)
@@ -614,22 +620,22 @@ class FargoADSGReader:
         file: os.PathLike[str],
         /,
         **meta: Any,  # noqa: ARG004
-    ) -> BinData:
+    ) -> BinData[f64]:
         output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
             file
         )
 
-        V = BinData.default_init()
+        V = BinData.default_init(dtype=np.dtype("float64"))
         V = replace(V, geometry=Geometry.POLAR)
 
-        phi = np.loadtxt(directory / "used_azi.dat")[:, 0]
-        domain_x = np.zeros(len(phi) + 1)
+        phi = np.loadtxt(directory / "used_azi.dat", dtype="float64")[:, 0]
+        domain_x = np.zeros(len(phi) + 1, dtype="float64")
         domain_x[:-1] = phi
         domain_x[-1] = 2 * np.pi
         domain_x -= np.pi
         # We avoid ghost cells
-        domain_y = np.loadtxt(directory / "used_rad.dat")
-        domain_z = np.zeros(2)
+        domain_y = np.loadtxt(directory / "used_rad.dat", dtype="float64")
+        domain_z = np.zeros(2, dtype="float64")
 
         V = replace(
             V,
@@ -643,7 +649,7 @@ class FargoADSGReader:
         n3 = len(V.x3) - 1
         grid_shape = n3, n1, n2
 
-        def _read_array(file: Path) -> FloatArray:
+        def _read_array(file: Path) -> FArray3D[F]:
             return (  # type: ignore[no-any-return]
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)
@@ -731,7 +737,7 @@ class NPYReader:
         return sorted(file_paths)
 
     @staticmethod
-    def read(file: os.PathLike[str], /, **meta: Any) -> BinData:
+    def read(file: os.PathLike[str], /, **meta: Any) -> BinData[f32]:
         meta.setdefault("prefix", "")
 
         ref_file = Path(file).resolve()
@@ -747,7 +753,7 @@ class NPYReader:
             header_data = json.load(fh)
 
         geometry = Geometry(header_data.pop("geometry"))
-        coordinates: dict[str, FloatArray] = {
+        coordinates: dict[str, FArray1D[f32]] = {
             k: np.array(v, dtype="float32") for k, v in header_data.items()
         }
         x1, x2, x3 = coordinates.values()
@@ -769,8 +775,8 @@ class NPYReader:
         # sanity check: we should have rediscovered our starting file by now
         assert ref_file in fields_found.values()
 
-        data: dict[str, FloatArray] = {
+        data: dict[str, FArray[Any, f32]] = {
             k: np.load(v, allow_pickle=True) for k, v in fields_found.items()
         }
 
-        return BinData(data, geometry, x1, x2, x3)
+        return BinData(data, geometry, x1, x2, x3, dtype=np.dtype("float32"))

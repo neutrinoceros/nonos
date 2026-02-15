@@ -61,7 +61,7 @@ class Loader(Generic[F]):
     """
 
     parameter_file: Path
-    binary_reader: type[BinReader]
+    binary_reader: type[BinReader[F]]
     planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
 
@@ -71,7 +71,7 @@ class Loader(Generic[F]):
             raise FileNotFoundError(pf)
         object.__setattr__(self, "parameter_file", pf)
 
-    def load_bin_data(self, file: os.PathLike[str], /, **meta: Any) -> "BinData":
+    def load_bin_data(self, file: os.PathLike[str], /, **meta: Any) -> "BinData[F]":
         ini = self.load_ini_file()
         meta = ini.meta | meta
         return self.binary_reader.read(file, **meta)
@@ -178,7 +178,7 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
 
 @dataclass(slots=True, frozen=True, kw_only=True)
 class Ingredients(Generic[F]):
-    binary_reader: type[BinReader]
+    binary_reader: type[BinReader[F]]
     planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
 
