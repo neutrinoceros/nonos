@@ -15,13 +15,12 @@ else:
     _XRAY = "🩻"
 
 
-def configure_logger(level: int | str = 30, **kwargs) -> None:
+def configure_logger(*, level: int | str = 30) -> None:
     logger.remove()  # remove pre-existing handler
     logger.add(
         sink=sys.stderr,
         format="[{time:HH:mm:ss}] {level.icon} <level>{level:^8}</level> {message}",
         level=level,
-        **kwargs,
     )
     logger.configure(
         levels=[
