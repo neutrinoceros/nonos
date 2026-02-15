@@ -29,7 +29,7 @@ from nonos.api._angle_parsing import (
     _resolve_rotate_by,
 )
 from nonos.api.tools import find_around, find_nearest
-from nonos.loaders import Loader, Recipe, loader_from, recipe_from
+from nonos.loaders import BUILTIN_RECIPES, Loader, loader_from, recipe_from
 
 if sys.version_info >= (3, 11):
     from typing import TypedDict, Unpack, assert_never
@@ -251,7 +251,7 @@ class GasField(Generic[F]):
         operation: str,
         *,
         inifile: os.PathLike[str] | None = None,
-        code: str | Recipe | None = None,
+        code: str | None = None,
         directory: os.PathLike[str] | None = None,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
@@ -327,7 +327,7 @@ class GasField(Generic[F]):
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField[F]":
+    def replace(self, **substitutions: Unpack[GasFieldAttrs[F]]) -> "GasField[F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -350,6 +350,10 @@ class GasField(Generic[F]):
         one_count = self.shape.count(1)
         assert 1 <= one_count < 3
         return cast(Literal[1, 2, 3], 3 - one_count)
+
+    @property
+    def dtype(self) -> np.dtype[F]:
+        return self.loader.dtype
 
     def map(
         self,
@@ -654,7 +658,6 @@ class GasField(Generic[F]):
                 R = self.coordinates.get_axis_array_med("R")
                 z = self.coordinates.get_axis_array_med("z")
                 integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
-                # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
                 for i in range(self.shape[0]):
                     km = find_nearest(z, z.min())
                     kp = find_nearest(z, z.max())
@@ -709,7 +712,7 @@ class GasField(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -823,7 +826,7 @@ class GasField(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -878,7 +881,7 @@ class GasField(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1119,7 +1122,7 @@ class GasField(Generic[F]):
 
         ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1261,7 +1264,7 @@ class GasDataSet(Generic[D, F]):
         /,
         *,
         inifile: os.PathLike[str] | None = None,
-        code: str | Recipe | None = None,
+        code: str | None = None,
         geometry: str | None = None,
         directory: os.PathLike[str] | None = None,
         fluid: str | None = None,
@@ -1290,7 +1293,7 @@ class GasDataSet(Generic[D, F]):
             directory=directory,
         )
 
-        if fluid is not None and recipe is not Recipe.FARGO3D:
+        if fluid is not None and recipe != BUILTIN_RECIPES["fargo3d"]:
             warnings.warn(
                 "Unused keyword argument: 'fluid'",
                 category=UserWarning,
@@ -1351,7 +1354,7 @@ class GasDataSet(Generic[D, F]):
                 self.output_number,
                 operation="",
                 inifile=self._loader.parameter_file,
-                code=recipe,
+                code=code,
                 directory=directory,
             )
 

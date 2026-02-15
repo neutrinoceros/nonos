@@ -11,7 +11,7 @@ from packaging.version import Version
 from nonos._geometry import Coordinates
 from nonos._types import F, FArray2D, FArray3D, StrDict
 from nonos.api.analysis import GasField, Plotable
-from nonos.loaders import Recipe, loader_from, recipe_from
+from nonos.loaders import BUILTIN_RECIPES, loader_from, recipe_from
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -49,7 +49,7 @@ def file_analysis(
     recipe = recipe_from(code=code, parameter_file=inifile, directory=directory)
     ini = loader.load_ini_file().meta
 
-    if recipe is Recipe.IDEFIX_VTK and "analysis" in ini["Output"]:
+    if recipe == BUILTIN_RECIPES["idefix-vtk"] and "analysis" in ini["Output"]:
         analysis = ini["Output"]["analysis"]
         rpini = ini["Planet"]["dpl"]
         Ntmean = round(norb * 2 * np.pi * pow(rpini, 1.5) / analysis)

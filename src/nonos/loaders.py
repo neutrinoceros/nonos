@@ -5,33 +5,53 @@ __all__ = [
     "recipe_from",
 ]
 import os
-import sys
 from dataclasses import asdict, dataclass
-from enum import auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, final
 
+import numpy as np
+
 import nonos._readers as readers
 from nonos._types import BinReader, F, IniReader, PlanetReader
-
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-    from typing import assert_never
-else:
-    from typing_extensions import assert_never
-
-    from nonos._backports import StrEnum
-
 
 if TYPE_CHECKING:
     from nonos._types import BinData, IniData, PlanetData
 
 
-class Recipe(StrEnum):
-    IDEFIX_VTK = auto()
-    PLUTO_VTK = auto()
-    FARGO3D = auto()
-    FARGO_ADSG = auto()
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Recipe(Generic[F]):
+    binary_reader: type[BinReader[F]]
+    planet_reader: type[PlanetReader[F]]
+    ini_reader: type[IniReader]
+    dtype: np.dtype[F]
+
+
+BUILTIN_RECIPES = {
+    "idefix-vtk": Recipe(
+        binary_reader=readers.binary.VTKReader,
+        planet_reader=readers.planet.IdefixReader,
+        ini_reader=readers.ini.IdefixVTKReader,
+        dtype=np.dtype(">f4"),
+    ),
+    "pluto-vtk": Recipe(
+        binary_reader=readers.binary.VTKReader,
+        planet_reader=readers.planet.NullReader,
+        ini_reader=readers.ini.PlutoVTKReader,
+        dtype=np.dtype(">f4"),
+    ),
+    "fargo3d": Recipe(
+        binary_reader=readers.binary.Fargo3DReader,
+        planet_reader=readers.planet.Fargo3DReader,
+        ini_reader=readers.ini.Fargo3DReader,
+        dtype=np.dtype("=f8"),
+    ),
+    "fargo-adsg": Recipe(
+        binary_reader=readers.binary.FargoADSGReader,
+        planet_reader=readers.planet.FargoADSGReader,
+        ini_reader=readers.ini.FargoADSGReader,
+        dtype=np.dtype("=f8"),
+    ),
+}
 
 
 @final
@@ -64,6 +84,7 @@ class Loader(Generic[F]):
     binary_reader: type[BinReader[F]]
     planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
+    dtype: np.dtype[F]
 
     def __post_init__(self) -> None:
         pf = Path(self.parameter_file).resolve()
@@ -102,7 +123,7 @@ def loader_from(
         Valid values include, but are not necessarily limited to:
         - 'idefix_vtk'
         - 'pluto_vtk'
-        - 'fargo_adsg'
+        - 'fargo-adsg'
         - 'fargo3d'
 
       parameter_file: Path or str (optional)
@@ -129,8 +150,8 @@ def loader_from(
     )
 
 
-def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader[F]:
-    return Loader(parameter_file, **asdict(Ingredients.from_recipe(recipe)))
+def _compose_loader(recipe: Recipe[F], /, parameter_file: Path) -> Loader[F]:
+    return Loader(parameter_file, **asdict(recipe))
 
 
 def _parameter_file_from(
@@ -176,49 +197,12 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
         )
 
 
-@dataclass(slots=True, frozen=True, kw_only=True)
-class Ingredients(Generic[F]):
-    binary_reader: type[BinReader[F]]
-    planet_reader: type[PlanetReader[F]]
-    ini_reader: type[IniReader]
-
-    @classmethod
-    def from_recipe(cls, recipe: Recipe, /) -> "Ingredients[F]":
-        match recipe:
-            case Recipe.IDEFIX_VTK:
-                return Ingredients(
-                    binary_reader=readers.binary.VTKReader,
-                    planet_reader=readers.planet.IdefixReader,
-                    ini_reader=readers.ini.IdefixVTKReader,
-                )
-            case Recipe.PLUTO_VTK:
-                return Ingredients(
-                    binary_reader=readers.binary.VTKReader,
-                    planet_reader=readers.planet.NullReader,
-                    ini_reader=readers.ini.PlutoVTKReader,
-                )
-            case Recipe.FARGO3D:
-                return Ingredients(
-                    binary_reader=readers.binary.Fargo3DReader,
-                    planet_reader=readers.planet.Fargo3DReader,
-                    ini_reader=readers.ini.Fargo3DReader,
-                )
-            case Recipe.FARGO_ADSG:
-                return Ingredients(
-                    binary_reader=readers.binary.FargoADSGReader,
-                    planet_reader=readers.planet.FargoADSGReader,
-                    ini_reader=readers.ini.FargoADSGReader,
-                )
-            case _ as unreachable:
-                assert_never(unreachable)
-
-
 def recipe_from(
     *,
     code: str | None = None,
     parameter_file: os.PathLike[str] | None = None,
     directory: os.PathLike[str] | None = None,
-) -> Recipe:
+) -> Recipe[Any]:
     r"""
     Determine an appropriate loader recipe from user input.
 
@@ -230,7 +214,7 @@ def recipe_from(
         Valid values include, but are not necessarily limited to:
         - 'idefix_vtk'
         - 'pluto_vtk'
-        - 'fargo_adsg'
+        - 'fargo-adsg'
         - 'fargo3d'
 
       parameter_file: Path or str (optional)
@@ -259,8 +243,8 @@ def recipe_from(
         directory=directory,
     )
 
-    recipe_candidates: list[Recipe] = []
-    for recipe in Recipe.__members__.values():
+    recipe_candidates: list[Recipe[Any]] = []
+    for recipe in BUILTIN_RECIPES.values():
         loader = _compose_loader(recipe, parameter_file)
         try:
             loader.load_ini_file()
@@ -284,9 +268,14 @@ def recipe_from(
     raise ValueError(msg)
 
 
-def _code_to_recipe(code: str, /) -> Recipe:
+def _code_to_recipe(code: str, /) -> Recipe[F]:
     if code in ("pluto", "idefix"):
         # backward compatibility layer
         # this could be deprecated at some point
-        code += "_vtk"
-    return Recipe(code)
+        new_code = f"{code}-vtk"
+    else:
+        new_code = code
+    new_code = new_code.replace("_", "-")
+    if new_code not in BUILTIN_RECIPES:
+        raise ValueError(f"{code=!r} is not supported")
+    return BUILTIN_RECIPES[new_code]

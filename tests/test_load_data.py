@@ -48,7 +48,7 @@ def test_simple_fargo_adsg(test_data_dir, implicit_directory):
 
     ds = GasDataSet(
         200,
-        code="fargo_adsg",
+        code="fargo-adsg",
         inifile="planetpendragon_200k.par",
         directory=directory,
     )
