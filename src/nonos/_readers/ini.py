@@ -6,11 +6,11 @@ __all__ = [
 ]
 import os
 from pathlib import Path
-from typing import final
+from typing import Any, final
 
 import inifix
 
-from nonos._types import FrameType, IniData
+from nonos._types import FrameType, IniData, StrDict
 
 
 @final
@@ -18,7 +18,7 @@ class IdefixVTKReader:
     @staticmethod
     def read(file: os.PathLike[str], /) -> IniData:
         class IdefixIniOutput:
-            def __init__(self, *, vtk: list, **_kwargs) -> None:
+            def __init__(self, *, vtk: list, **_: Any) -> None:
                 self.vtk = float(vtk[0])
 
         class IdefixIniHydro:
@@ -30,7 +30,7 @@ class IdefixVTKReader:
                     self.frame = FrameType.FIXED_FRAME
 
         class IdefixIni:
-            def __init__(self, *, Hydro, Output, **_kwargs) -> None:
+            def __init__(self, *, Hydro: StrDict, Output: StrDict, **_: Any) -> None:
                 self.hydro = IdefixIniHydro(rotation=Hydro.get("rotation", [0.0]))
                 self.output = IdefixIniOutput(vtk=Output["vtk"])
 
@@ -51,11 +51,11 @@ class PlutoVTKReader:
     @staticmethod
     def read(file: os.PathLike[str], /) -> IniData:
         class PlutoIniOutput:
-            def __init__(self, *, vtk: list, **_kwargs) -> None:
+            def __init__(self, *, vtk: list, **_: Any) -> None:
                 self.vtk = float(vtk[0])
 
         class PlutoIni:
-            def __init__(self, **kwargs) -> None:
+            def __init__(self, **kwargs: Any) -> None:
                 self.output = PlutoIniOutput(**kwargs["Static Grid Output"])
 
         meta = inifix.load(file, sections="require", parse_scalars_as_lists=True)
@@ -82,7 +82,7 @@ class Fargo3DReader:
                 DT: list,
                 FRAME: list = ["F"],  # noqa: B006
                 OMEGAFRAME: list = [0.0],  # noqa: B006
-                **_kwargs,
+                **_: Any,
             ) -> None:
                 self.NINTERM = int(NINTERM[0])
                 self.DT = float(DT[0])
@@ -126,7 +126,7 @@ class FargoADSGReader:
                 DT: list,
                 Frame: list = ["F"],  # noqa: B006
                 OmegaFrame: list = [0.0],  # noqa: B006
-                **_kwargs,
+                **_: Any,
             ) -> None:
                 self.NINTERM = int(Ninterm[0])
                 self.DT = float(DT[0])

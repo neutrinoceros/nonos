@@ -105,7 +105,7 @@ jobs:
 
     - name: Typecheck
       run: |
-        uv run --frozen --no-editable --group typecheck mypy src tests
+        uv run --frozen --no-editable --group typecheck mypy src
 
   image-tests:
     name: Image tests

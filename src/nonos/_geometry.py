@@ -99,7 +99,7 @@ def _get_target_geometry(*axes: Axis) -> Geometry:
 def _native_axis_from_target_axis(
     native_geometry: Geometry,
     axis: Axis,
-):
+) -> Axis:
     if axis in axes_from_geometry(native_geometry):
         return axis
 
@@ -301,7 +301,7 @@ class Coordinates(Generic[F]):
         self, axis_1: Axis, axis_2: Axis, /
     ) -> tuple[Axis, Axis]: ...
 
-    def native_from_wanted(self, axis_1, axis_2=None, /):
+    def native_from_wanted(self, axis_1, axis_2=None, /):  # type: ignore[no-untyped-def]
         # compatibility shim for old Coordinates class
         # TODO: rename this
         if axis_2 is not None:
@@ -451,7 +451,7 @@ class Coordinates(Generic[F]):
             case _ as unreachable:
                 assert_never(unreachable)
 
-    def _safe_get_axis_array(self, attr) -> FArray1D[F]:
+    def _safe_get_axis_array(self, attr: str) -> FArray1D[F]:
         try:
             return self.get_axis_array(attr)
         except KeyError:

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, Literal
 
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
@@ -32,9 +32,9 @@ from nonos.api.tools import find_around, find_nearest
 from nonos.loaders import Loader, Recipe, loader_from, recipe_from
 
 if sys.version_info >= (3, 11):
-    from typing import assert_never
+    from typing import TypedDict, Unpack, assert_never
 else:
-    from typing_extensions import assert_never
+    from typing_extensions import TypedDict, Unpack, assert_never
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -44,6 +44,7 @@ else:
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
     from matplotlib.figure import Figure
 
 
@@ -51,6 +52,15 @@ if TYPE_CHECKING:  # pragma: no cover
 class NamedArray(Generic[D, F]):
     name: str
     data: FArray[D, F]
+
+
+class PColorMeshKwargs(TypedDict, total=False):
+    vmin: float | None
+    vmax: float | None
+    norm: "Normalize"
+    alpha: float
+    shading: Literal["flat", "nearest", "gouraud", "auto"] | None
+    rasterized: bool
 
 
 class Plotable(Generic[D, F]):
@@ -97,7 +107,7 @@ class Plotable(Generic[D, F]):
         title: str | None = None,
         unit_conversion: float | None = None,
         nbin: int | None = None,  # deprecated
-        **kwargs,
+        **kwargs: Unpack[PColorMeshKwargs],
     ) -> "Artist":
         if nbin is not None:
             warnings.warn(
@@ -117,7 +127,7 @@ class Plotable(Generic[D, F]):
 
         artist: Artist
         if data.ndim == 2:
-            kw = {}
+            kw: PColorMeshKwargs = {}
             if (norm := kwargs.get("norm")) is not None:
                 if "vmin" in kwargs:
                     norm.vmin = kwargs.pop("vmin")
@@ -132,7 +142,7 @@ class Plotable(Generic[D, F]):
                 )
                 kw.update({"vmin": vmin, "vmax": vmax})
 
-            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **(kwargs | kw))
+            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **(kwargs | kw))  # ty: ignore[invalid-argument-type]
             ax.set(
                 xlim=(aval.min(), aval.max()),
                 ylim=(oval.min(), oval.max()),
@@ -164,8 +174,8 @@ class Plotable(Generic[D, F]):
                         )
                         cb_axis.set_minor_locator(locator)
         elif data.ndim == 1:
-            vmin = kwargs.pop("vmin") if "vmin" in kwargs else np.nanmin(data)
-            vmax = kwargs.pop("vmax") if "vmax" in kwargs else np.nanmax(data)
+            vmin = kwargs.pop("vmin") if "vmin" in kwargs else float(np.nanmin(data))
+            vmax = kwargs.pop("vmax") if "vmax" in kwargs else float(np.nanmax(data))
             if "norm" in kwargs:
                 kwargs.pop("norm")
             artist = ax.plot(aval, data, **kwargs)[0]
@@ -200,6 +210,17 @@ def _find_planet_azimuth(
     pd = loader.planet_reader.read(data_dir / planet_file)
     ind_on = _get_ind_output_number(loader, output_number, pd.t)
     return np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi)
+
+
+class GasFieldAttrs(Generic[D, F], TypedDict, total=False):
+    name: str
+    data: FArray[D, F]
+    coordinates: Coordinates[F]
+    native_geometry: Geometry
+    output_number: int
+    loader: Loader
+    operation: str
+    rotate_by: float
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
@@ -304,7 +325,7 @@ class GasField(Generic[D, F]):
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions) -> "GasField":
+    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -324,7 +345,9 @@ class GasField(Generic[D, F]):
 
     def map(
         self,
-        *wanted,
+        a: str,
+        b: str | None = None,
+        /,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
         planet_corotation: int | None = None,  # deprecated
@@ -346,15 +369,15 @@ class GasField(Generic[D, F]):
         # i.e. the number of reductions already performed (0 -> 3D, 1 -> 2D, 2 -> 1D)
         if self.shape.count(1) not in (1, 2):
             raise ValueError("data has to be 1D or 2D in order to call map.")
-        dimension = len(wanted)
 
-        if dimension == 1:
-            axis_1 = Axis.from_label(wanted[0])
+        axis_1 = Axis.from_label(a)
+
+        if b is None:
             meshgrid_conversion = self.coordinates._meshgrid_conversion_1d(axis_1)
 
             abscissa_value = list(meshgrid_conversion.values())[0]
             abscissa_key = list(meshgrid_conversion.keys())[0]
-            if "phi" in wanted and not _fequal(self.rotate_by, rotate_by):
+            if axis_1 is Axis.AZIMUTH and not _fequal(self.rotate_by, rotate_by):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 ipi = find_nearest(phicoord, 0)
                 if abs(0 - phicoord[ipi]) > abs(
@@ -378,10 +401,8 @@ class GasField(Generic[D, F]):
                 ordinate=(data_key, data_view.squeeze()),
             )
 
-        elif dimension == 2:
-            axis_1_str, axis_2_str = wanted
-            axis_1 = Axis.from_label(axis_1_str)
-            axis_2 = Axis.from_label(axis_2_str)
+        else:
+            axis_2 = Axis.from_label(b)
 
             meshgrid_conversion = self.coordinates._meshgrid_conversion_2d(
                 axis_1, axis_2
@@ -442,8 +463,6 @@ class GasField(Generic[D, F]):
                 ordinate=(ordinate_key.label, ordinate_value),
                 field=(data_key, data_view),
             )
-        else:
-            raise AssertionError
 
     def save(
         self,
@@ -596,7 +615,10 @@ class GasField(Generic[D, F]):
             return suffix
 
     def latitudinal_projection(
-        self, theta: float | None = None, *, operation_name: str | None = None
+        self,
+        theta: float | None = None,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         default_suffix = "latitudinal_projection"
         if theta is not None:
@@ -687,7 +709,10 @@ class GasField(Generic[D, F]):
         )
 
     def vertical_projection(
-        self, z: float | None = None, *, operation_name: str | None = None
+        self,
+        z: float | None = None,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         default_suffix = "vertical_projection"
         if z is not None:
@@ -751,7 +776,9 @@ class GasField(Generic[D, F]):
         )
 
     def vertical_at_midplane(
-        self, *, operation_name: str | None = None
+        self,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
@@ -796,7 +823,10 @@ class GasField(Generic[D, F]):
         )
 
     def latitudinal_at_theta(
-        self, theta: float = 0.0, *, operation_name: str | None = None
+        self,
+        theta: float = 0.0,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField":
         operation = self._resolve_operation_name(
             prefix=self.operation,
@@ -848,7 +878,10 @@ class GasField(Generic[D, F]):
         )
 
     def vertical_at_z(
-        self, z=0.0, *, operation_name: str | None = None
+        self,
+        z: float = 0.0,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
@@ -887,7 +920,10 @@ class GasField(Generic[D, F]):
         )
 
     def azimuthal_at_phi(
-        self, phi: float = 0.0, *, operation_name: str | None = None
+        self,
+        phi: float = 0.0,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
@@ -1047,7 +1083,10 @@ class GasField(Generic[D, F]):
         )
 
     def radial_at_r(
-        self, distance=1.0, *, operation_name: str | None = None
+        self,
+        distance: float = 1.0,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
@@ -1082,7 +1121,11 @@ class GasField(Generic[D, F]):
         )
 
     def radial_average_interval(
-        self, vmin=None, vmax=None, *, operation_name: str | None = None
+        self,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        *,
+        operation_name: str | None = None,
     ) -> "GasField[D, F]":
         if (vmin is None) or (vmax is None):
             raise ValueError(

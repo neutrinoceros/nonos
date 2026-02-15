@@ -9,7 +9,7 @@ import sys
 from dataclasses import asdict, dataclass
 from enum import auto
 from pathlib import Path
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Any, final
 
 import nonos._readers as readers
 from nonos._types import BinReader, IniReader, PlanetReader
@@ -71,7 +71,7 @@ class Loader:
             raise FileNotFoundError(pf)
         object.__setattr__(self, "parameter_file", pf)
 
-    def load_bin_data(self, file: os.PathLike[str], /, **meta) -> "BinData":
+    def load_bin_data(self, file: os.PathLike[str], /, **meta: Any) -> "BinData":
         ini = self.load_ini_file()
         meta = ini.meta | meta
         return self.binary_reader.read(file, **meta)

@@ -132,7 +132,7 @@ show_error_codes = true
 warn_unused_configs = true
 warn_unused_ignores = false
 show_error_context = true
-disallow_untyped_defs = false  # TODO: add missing annotations and switch this option to true
+disallow_untyped_defs = true
 ignore_missing_imports = true
 
 [tool.coverage.run]

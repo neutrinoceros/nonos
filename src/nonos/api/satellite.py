@@ -9,7 +9,7 @@ import numpy as np
 from packaging.version import Version
 
 from nonos._geometry import Coordinates
-from nonos._types import D2, F, FArray2D, StrDict
+from nonos._types import D2, D, F, FArray, FArray2D, StrDict
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -19,6 +19,7 @@ else:
     from typing_extensions import deprecated
 
 if TYPE_CHECKING:
+    from matplotlib.artist import Artist
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
@@ -151,11 +152,11 @@ class NonosLick(Generic[F]):
         vmax: float | None = None,
         alpha: float = 0.45,
         log: bool = False,
-        cmap=None,
+        cmap: str | None = None,
         title: str | None = None,
         density_streamlines: float | None = None,
         color_streamlines: str = "black",
-    ):
+    ) -> "Artist":
         im = Plotable(
             abscissa=("x", self.X),
             ordinate=("y", self.Y),
@@ -211,9 +212,9 @@ class NonosLick(Generic[F]):
 )
 def compute(
     field: str,
-    data: np.ndarray,
-    ref: GasField,
-) -> GasField:
+    data: FArray[D, F],
+    ref: GasField[D, F],
+) -> GasField[D, F]:
     return ref.replace(name=field, data=data)
 
 
@@ -225,22 +226,19 @@ def compute(
 def from_data(
     *,
     field: str,
-    data: np.ndarray,
-    coords: Coordinates,
+    data: FArray[D, F],
+    coords: Coordinates[F],
     on: int,
     operation: str,
     inifile: os.PathLike[str] | None = None,
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
-):  # pragma: no cover
-    ret_data = data
-    ret_coords = coords
-    geometry = coords.geometry
+) -> GasField[D, F]:  # pragma: no cover
     return GasField._legacy_init(
         field,
-        ret_data,
-        ret_coords,
-        geometry,
+        data,
+        coords,
+        coords.geometry,
         on,
         operation=operation,
         inifile=inifile,
@@ -255,7 +253,7 @@ def from_file(
     operation: str,
     on: int,
     directory: os.PathLike[str] | None = None,
-):
+) -> GasField:
     if directory is None:
         directory = Path.cwd()
     else:
