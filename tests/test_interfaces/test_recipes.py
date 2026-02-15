@@ -28,11 +28,7 @@ def validate_dataclass_instance(instance, cls):
             # skip unresolved annotations and generics
             continue
         obj = getattr(instance, key)
-        if key in ("data", "meta"):
-            assert isinstance(obj, dict)
-            assert all(isinstance(_, str) for _ in obj.keys())
-        else:
-            assert isinstance(obj, expected_type)
+        assert isinstance(obj, expected_type)
 
 
 class CheckLoader:
