@@ -228,10 +228,6 @@ class Coordinates(Generic[F]):
     x3: FArray1D[F]
 
     def __post_init__(self) -> None:
-        if isinstance(self.geometry, str):
-            # for convenience
-            object.__setattr__(self, "geometry", Geometry(self.geometry))
-
         x1 = self.x1
         x2 = self.x2
         x3 = self.x3
