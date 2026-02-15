@@ -277,7 +277,7 @@ class Coordinates(Generic[F]):
         arr = self.get_axis_array(axis)
         return cast(FArray1D[F], 0.5 * (arr[1:] + arr[:-1]))
 
-    def project_along(self, axis: Axis, position: float) -> Coordinates:
+    def project_along(self, axis: Axis, position: float) -> Coordinates[F]:
         from nonos.api.tools import find_around
 
         idx = self.get_axis_index(axis)

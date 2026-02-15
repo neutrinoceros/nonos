@@ -9,10 +9,10 @@ import sys
 from dataclasses import asdict, dataclass
 from enum import auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, final
+from typing import TYPE_CHECKING, Any, Generic, final
 
 import nonos._readers as readers
-from nonos._types import BinReader, IniReader, PlanetReader
+from nonos._types import BinReader, F, IniReader, PlanetReader
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -36,7 +36,7 @@ class Recipe(StrEnum):
 
 @final
 @dataclass(frozen=True, eq=True, slots=True)
-class Loader:
+class Loader(Generic[F]):
     r"""
     A composable data loader interface.
 
@@ -61,9 +61,9 @@ class Loader:
     """
 
     parameter_file: Path
-    binary_reader: type["BinReader"]
-    planet_reader: type["PlanetReader"]
-    ini_reader: type["IniReader"]
+    binary_reader: type[BinReader]
+    planet_reader: type[PlanetReader[F]]
+    ini_reader: type[IniReader]
 
     def __post_init__(self) -> None:
         pf = Path(self.parameter_file).resolve()
@@ -76,7 +76,7 @@ class Loader:
         meta = ini.meta | meta
         return self.binary_reader.read(file, **meta)
 
-    def load_planet_data(self, file: os.PathLike[str]) -> "PlanetData":
+    def load_planet_data(self, file: os.PathLike[str]) -> "PlanetData[F]":
         return self.planet_reader.read(file)
 
     def load_ini_file(self) -> "IniData":
@@ -129,7 +129,7 @@ def loader_from(
     )
 
 
-def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader:
+def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader[F]:
     return Loader(parameter_file, **asdict(Ingredients.from_recipe(recipe)))
 
 
@@ -177,13 +177,13 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class Ingredients:
+class Ingredients(Generic[F]):
     binary_reader: type[BinReader]
-    planet_reader: type[PlanetReader]
+    planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
 
     @classmethod
-    def from_recipe(cls, recipe: Recipe, /) -> "Ingredients":
+    def from_recipe(cls, recipe: Recipe, /) -> "Ingredients[F]":
         match recipe:
             case Recipe.IDEFIX_VTK:
                 return Ingredients(
