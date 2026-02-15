@@ -99,7 +99,7 @@ class NonosLick(Generic[F]):
 
         lick_box_kwargs: StrDict
         if Version(version("lick")) >= Version("0.10.0dev0"):
-            from lick import lick_box
+            from lick import lick_box  # type: ignore[attr-defined]
 
             lick_box_kwargs = {
                 "kernel": np.sin(np.linspace(0, np.pi, kernel_length, endpoint=False)),
