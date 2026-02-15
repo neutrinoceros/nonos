@@ -35,7 +35,7 @@ if sys.version_info < (3, 11):
             member._value_ = value
             return member
 
-        def _generate_next_value_(name, start, count, last_values):  # noqa: ARG002 # type: ignore
+        def _generate_next_value_(name, start, count, last_values):  # type: ignore  # noqa: ARG002
             """
             Return the lower-cased version of the member name.
             """

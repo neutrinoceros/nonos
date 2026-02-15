@@ -8,7 +8,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import final
+from typing import Any, final
 
 import numpy as np
 
@@ -59,7 +59,7 @@ class VTKReader:
         return sorted(directory.glob("data.*.vtk"))
 
     @staticmethod
-    def read(file, /, **meta) -> BinData:
+    def read(file: str | os.PathLike[str], /, **meta: Any) -> BinData:
         """
         Adapted from Geoffroy Lesur
         Function that reads a vtk file in polar coordinates
@@ -515,7 +515,9 @@ class FargoReaderHelper:
         ]
 
     @staticmethod
-    def _get_output_number_and_dir_from(file) -> tuple[int, Path]:
+    def _get_output_number_and_dir_from(
+        file: str | os.PathLike[str],
+    ) -> tuple[int, Path]:
         _in_file = Path(file).resolve()
         directory = _in_file.parent
         if (match := re.search(r"(?P<on>\d+).dat$", _in_file.name)) is not None:
@@ -547,7 +549,7 @@ class Fargo3DReader:
     def read(
         file: os.PathLike[str],
         /,
-        **meta,
+        **meta: Any,
     ) -> BinData:
         output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
             file
@@ -648,7 +650,7 @@ class FargoADSGReader:
     def read(
         file: os.PathLike[str],
         /,
-        **meta,  # noqa: ARG004
+        **meta: Any,  # noqa: ARG004
     ) -> BinData:
         output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
             file
@@ -678,7 +680,7 @@ class FargoADSGReader:
         n3 = len(V.x3) - 1
         grid_shape = n3, n1, n2
 
-        def _read_array(file: Path):
+        def _read_array(file: Path) -> FloatArray:
             return (
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)
@@ -766,7 +768,7 @@ class NPYReader:
         return sorted(file_paths)
 
     @staticmethod
-    def read(file: os.PathLike[str], /, **meta) -> BinData:
+    def read(file: os.PathLike[str], /, **meta: Any) -> BinData:
         meta.setdefault("prefix", "")
 
         ref_file = Path(file).resolve()
