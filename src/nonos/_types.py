@@ -162,7 +162,7 @@ class PlanetData(Generic[F]):
 
     def get_rotational_rate(self) -> FArray1D[F]:
         d = self.d  # type: ignore [attr-defined]
-        return np.sqrt((1.0 + self.q) / pow(d, 3.0))
+        return np.sqrt((1.0 + self.q) / pow(d, 3.0))  # type: ignore[no-any-return]
 
 
 for key in PlanetData._post_init_attrs:

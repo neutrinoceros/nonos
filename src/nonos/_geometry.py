@@ -267,7 +267,7 @@ class Coordinates(Generic[F]):
             arr = self.x3
         else:
             raise AssertionError
-        return arr.copy()
+        return arr.copy()  # type: ignore[no-any-return]
 
     def get_axis_array_med(self, axis: Axis | str) -> FArray1D[F]:
         # convenience compatibility shim
