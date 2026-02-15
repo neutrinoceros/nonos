@@ -218,7 +218,7 @@ class GasFieldAttrs(Generic[D, F], TypedDict, total=False):
     coordinates: Coordinates[F]
     native_geometry: Geometry
     output_number: int
-    loader: Loader
+    loader: Loader[F]
     operation: str
     rotate_by: float
 
