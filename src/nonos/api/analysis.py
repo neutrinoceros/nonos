@@ -337,11 +337,6 @@ class GasField(Generic[D, F]):
 
     @property
     def shape(self) -> tuple[int, int, int]:
-        """
-        Returns
-        =======
-        shape : tuple
-        """
         i, j, k = (max(1, n - 1) for n in self.coordinates.shape)
         return i, j, k
 
