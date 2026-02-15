@@ -27,6 +27,6 @@ def find_nearest(array: FArray1D[F], value: float) -> int:
     "plans for a replacement in the public API. "
 )
 def find_around(array: FArray1D[F], value: float) -> FArray1D[F]:
-    from nonos._approx import bracket_values
+    from nonos._approx import bracketing_values
 
-    return np.array(bracket_values(array, value))
+    return np.array(bracketing_values(array, value))

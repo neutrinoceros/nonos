@@ -1,8 +1,10 @@
 __all__ = [
-    "bracket_values",
+    "bracketing_values",
     "closest_index",
     "closest_value",
 ]
+from dataclasses import dataclass
+
 import numpy as np
 
 from nonos._types import F, FArray1D
@@ -18,8 +20,24 @@ def closest_value(arr: FArray1D[F], v: float, /) -> float:
     return arr[closest_index(arr, v)]
 
 
-def bracket_values(arr: FArray1D[F], v: float, /) -> tuple[float, float]:
-    """Find the first two values in arr closest to v"""
-    lo = closest_value(arr, v)
-    hi = closest_value(np.ma.masked_less_equal(arr, lo, copy=False), v)
-    return (float(lo), float(hi))
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Interval:
+    lo: float
+    hi: float
+
+    @property
+    def span(self) -> float:
+        return self.hi - self.lo
+
+    def as_array(self, *, dtype: np.dtype[F]) -> FArray1D[F]:
+        return np.array((self.lo, self.hi), dtype=dtype)
+
+
+def bracketing_values(arr: FArray1D[F], v: float, /) -> Interval:
+    """Find the first two values in arr closest to v, sorted from low to high"""
+    v1 = closest_value(arr, v)
+    v2 = closest_value(np.ma.masked_less_equal(arr, v1, copy=False), v)
+    return Interval(
+        lo=float(min(v1, v2)),
+        hi=float(max(v1, v2)),
+    )
