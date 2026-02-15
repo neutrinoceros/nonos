@@ -29,16 +29,13 @@ f32 = np.float32
 f64 = np.float64
 
 
-def load_from_fid(
-    fid: BufferedReader, /, *, dtype: np.dtype, count: int, lazy: bool = True
+def lazy_load_from_fid(
+    fid: BufferedReader, /, *, dtype: np.dtype, count: int
 ) -> FArray1D[F]:
-    if lazy:
-        offset = fid.tell()
-        retv = np.memmap(fid, mode="r", dtype=dtype, offset=offset, shape=count)
-        fid.seek(offset + dtype.itemsize * count, os.SEEK_SET)
-        return retv
-    else:
-        return np.fromfile(fid, dtype, count=count)
+    offset = fid.tell()
+    retv = np.memmap(fid, mode="r", dtype=dtype, offset=offset, shape=count)
+    fid.seek(offset + dtype.itemsize * count, os.SEEK_SET)
+    return retv
 
 
 @final
@@ -185,15 +182,15 @@ class VTKReader:
 
         if V.geometry is Geometry.CARTESIAN:
             s = fid.readline()  # X_COORDINATES NX float
-            x = load_from_fid(fid, dtype=f32_be, count=n1)
+            x = lazy_load_from_fid(fid, dtype=f32_be, count=n1)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Y_COORDINATES NY float
-            y = load_from_fid(fid, dtype=f32_be, count=n2)
+            y = lazy_load_from_fid(fid, dtype=f32_be, count=n2)
             s = fid.readline()  # Extra line feed added by idefix
 
             s = fid.readline()  # Z_COORDINATES NZ float
-            z = load_from_fid(fid, dtype=f32_be, count=n3)
+            z = lazy_load_from_fid(fid, dtype=f32_be, count=n3)
             s = fid.readline()  # Extra line feed added by idefix
             s = fid.readline()  # POINT_DATA NXNYNZ
 
@@ -245,7 +242,7 @@ class VTKReader:
             s = fid.readline()  # POINTS NXNYNZ float
             slist = s.split()
             npoints = int(slist[1])
-            points = load_from_fid(fid, dtype=f32_be, count=3 * npoints)
+            points = lazy_load_from_fid(fid, dtype=f32_be, count=3 * npoints)
             s = fid.readline()  # EXTRA LINE FEED
 
             if (grid_size := n1 * n2 * n3) != npoints:  # pragma: no cover
@@ -400,14 +397,14 @@ class VTKReader:
                 varname = slist[1].decode("utf-8").upper()
                 if datatype == "SCALARS":
                     fid.readline()  # LOOKUP TABLE
-                    array = load_from_fid(
+                    array = lazy_load_from_fid(
                         fid,
                         dtype=f32_be,
                         count=grid_size,
                     ).reshape(new_shape)
                     V.data[varname] = np.transpose(array)
                 elif datatype == "VECTORS":
-                    Q = load_from_fid(fid, dtype=f32_be, count=3 * grid_size)
+                    Q = lazy_load_from_fid(fid, dtype=f32_be, count=3 * grid_size)
 
                     for i, suffix in enumerate("XYZ"):
                         name = f"{varname}_{suffix}"
