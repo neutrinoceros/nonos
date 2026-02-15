@@ -5,8 +5,8 @@ __all__ = [
     "Plotable",
     "compute",
     "file_analysis",
-    "find_around",
-    "find_nearest",
+    "find_around",  # deprecated
+    "find_nearest",  # deprecated
     "from_data",
     "from_file",
 ]

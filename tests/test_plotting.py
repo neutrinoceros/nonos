@@ -5,24 +5,20 @@ import pytest
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
-from nonos.api import GasDataSet, compute, find_nearest, from_data
+from nonos._approx import closest_index
+from nonos.api import GasDataSet, compute, from_data
 
 
 def test_plot_planet_corotation(test_data_dir):
     os.chdir(test_data_dir / "idefix_planet3d")
 
     ds = GasDataSet(43, geometry="polar")
-    azimfield = ds["RHO"].radial_at_r().vertical_at_midplane().map("phi").data
-    assert find_nearest(azimfield, azimfield.max()) != 0
+    field = ds["RHO"].radial_at_r().vertical_at_midplane()
+    azimfield = field.map("phi").data
+    assert closest_index(azimfield, azimfield.max()) != 0
 
-    azimfieldPlanet = (
-        ds["RHO"]
-        .radial_at_r()
-        .vertical_at_midplane()
-        .map("phi", rotate_with="planet0.dat")
-        .data
-    )
-    assert find_nearest(azimfieldPlanet, azimfieldPlanet.max()) == 0
+    azimfieldPlanet = field.map("phi", rotate_with="planet0.dat").data
+    assert closest_index(azimfieldPlanet, azimfieldPlanet.max()) == 0
 
 
 def test_unit_conversion(test_data_dir):

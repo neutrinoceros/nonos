@@ -13,6 +13,7 @@ from typing import Generic, cast, final, overload
 
 import numpy as np
 
+from nonos._approx import bracketing_values
 from nonos._types import F, FArray1D, StrDict
 
 if sys.version_info >= (3, 11):
@@ -246,6 +247,10 @@ class Coordinates(Generic[F]):
         return len(self.x1), len(self.x2), len(self.x3)
 
     @property
+    def dtype(self) -> np.dtype[F]:
+        return self.x1.dtype
+
+    @property
     def axes(self) -> tuple[Axis, Axis, Axis]:
         return axes_from_geometry(self.geometry)
 
@@ -278,11 +283,9 @@ class Coordinates(Generic[F]):
         return cast(FArray1D[F], 0.5 * (arr[1:] + arr[:-1]))
 
     def project_along(self, axis: Axis, position: float) -> Coordinates[F]:
-        from nonos.api.tools import find_around
-
         idx = self.get_axis_index(axis)
         arrs = [self.get_axis_array(ax) for ax in self.axes]
-        arrs[idx] = find_around(arrs[idx], position)
+        arrs[idx] = bracketing_values(arrs[idx], position).as_array(dtype=self.dtype)
         return Coordinates(self.geometry, *arrs)
 
     def to_dict(self) -> StrDict:
