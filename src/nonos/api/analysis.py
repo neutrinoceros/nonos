@@ -150,7 +150,9 @@ class Plotable(Generic[D, F]):
                 ylabel=okey,
             )
             if title is not None:
-                from mpl_toolkits.axes_grid1 import make_axes_locatable
+                from mpl_toolkits.axes_grid1 import (  # type: ignore[import-untyped]
+                    make_axes_locatable,
+                )
 
                 divider = make_axes_locatable(ax)
                 cax = divider.append_axes("right", size="5%", pad=0.05)
