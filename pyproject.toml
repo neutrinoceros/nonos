@@ -129,14 +129,19 @@ deprecated = "ignore"
 [tool.mypy]
 python_version = "3.10"
 strict = true
+# temporary overrides to strict mode
 disallow_any_generics = false # 31 errors
-disallow_untyped_calls = false # 5 errors
 warn_return_any = false # 10 errors
 warn_unused_ignores = false # 1 error
+ignore_missing_imports = true
 
+# permanent overrides to strict mode
+# last checked, this only flagged Enum.__call__ used on final classes,,
+disallow_untyped_calls = false
+
+# customized outputs
 show_error_codes = true
 show_error_context = true
-ignore_missing_imports = true
 
 [tool.coverage.run]
 source = [
