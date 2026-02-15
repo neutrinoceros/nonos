@@ -18,6 +18,7 @@ class TestLoader:
                 binary_reader=None,
                 planet_reader=None,
                 ini_reader=None,
+                dtype=None,
             )
 
     def test_read_only_interface(self, tmp_path, loader_slot):
@@ -29,6 +30,7 @@ class TestLoader:
             binary_reader=None,
             planet_reader=None,
             ini_reader=None,
+            dtype=None,
         )
 
         public_name = loader_slot.removeprefix("_")

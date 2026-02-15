@@ -11,6 +11,8 @@ from enum import auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, final
 
+import numpy as np
+
 import nonos._readers as readers
 from nonos._types import BinReader, F, IniReader, PlanetReader
 
@@ -27,11 +29,52 @@ if TYPE_CHECKING:
     from nonos._types import BinData, IniData, PlanetData
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Ingredients(Generic[F]):
+    binary_reader: type[BinReader[F]]
+    planet_reader: type[PlanetReader[F]]
+    ini_reader: type[IniReader]
+    dtype: np.dtype[F]
+
+
 class Recipe(StrEnum):
     IDEFIX_VTK = auto()
     PLUTO_VTK = auto()
     FARGO3D = auto()
     FARGO_ADSG = auto()
+
+    def as_ingredients(self, /) -> Ingredients:
+        match self:
+            case Recipe.IDEFIX_VTK:
+                return Ingredients(
+                    binary_reader=readers.binary.VTKReader,
+                    planet_reader=readers.planet.IdefixReader,
+                    ini_reader=readers.ini.IdefixVTKReader,
+                    dtype=np.dtype(">f4"),
+                )
+            case Recipe.PLUTO_VTK:
+                return Ingredients(
+                    binary_reader=readers.binary.VTKReader,
+                    planet_reader=readers.planet.NullReader,
+                    ini_reader=readers.ini.PlutoVTKReader,
+                    dtype=np.dtype(">f4"),
+                )
+            case Recipe.FARGO3D:
+                return Ingredients(
+                    binary_reader=readers.binary.Fargo3DReader,
+                    planet_reader=readers.planet.Fargo3DReader,
+                    ini_reader=readers.ini.Fargo3DReader,
+                    dtype=np.dtype("=f8"),
+                )
+            case Recipe.FARGO_ADSG:
+                return Ingredients(
+                    binary_reader=readers.binary.FargoADSGReader,
+                    planet_reader=readers.planet.FargoADSGReader,
+                    ini_reader=readers.ini.FargoADSGReader,
+                    dtype=np.dtype("=f8"),
+                )
+            case _ as unreachable:
+                assert_never(unreachable)
 
 
 @final
@@ -64,6 +107,7 @@ class Loader(Generic[F]):
     binary_reader: type[BinReader[F]]
     planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
+    dtype: np.dtype[F]
 
     def __post_init__(self) -> None:
         pf = Path(self.parameter_file).resolve()
@@ -130,7 +174,7 @@ def loader_from(
 
 
 def _compose_loader(recipe: Recipe, /, parameter_file: Path) -> Loader[F]:
-    return Loader(parameter_file, **asdict(Ingredients.from_recipe(recipe)))
+    return Loader(parameter_file, **asdict(recipe.as_ingredients()))
 
 
 def _parameter_file_from(
@@ -174,43 +218,6 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
             f"Found multiple parameter files in {directory}\n - "
             + "\n - ".join(str(c) for c in candidates)
         )
-
-
-@dataclass(slots=True, frozen=True, kw_only=True)
-class Ingredients(Generic[F]):
-    binary_reader: type[BinReader[F]]
-    planet_reader: type[PlanetReader[F]]
-    ini_reader: type[IniReader]
-
-    @classmethod
-    def from_recipe(cls, recipe: Recipe, /) -> "Ingredients[F]":
-        match recipe:
-            case Recipe.IDEFIX_VTK:
-                return Ingredients(
-                    binary_reader=readers.binary.VTKReader,
-                    planet_reader=readers.planet.IdefixReader,
-                    ini_reader=readers.ini.IdefixVTKReader,
-                )
-            case Recipe.PLUTO_VTK:
-                return Ingredients(
-                    binary_reader=readers.binary.VTKReader,
-                    planet_reader=readers.planet.NullReader,
-                    ini_reader=readers.ini.PlutoVTKReader,
-                )
-            case Recipe.FARGO3D:
-                return Ingredients(
-                    binary_reader=readers.binary.Fargo3DReader,
-                    planet_reader=readers.planet.Fargo3DReader,
-                    ini_reader=readers.ini.Fargo3DReader,
-                )
-            case Recipe.FARGO_ADSG:
-                return Ingredients(
-                    binary_reader=readers.binary.FargoADSGReader,
-                    planet_reader=readers.planet.FargoADSGReader,
-                    ini_reader=readers.ini.FargoADSGReader,
-                )
-            case _ as unreachable:
-                assert_never(unreachable)
 
 
 def recipe_from(

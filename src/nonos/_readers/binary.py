@@ -85,7 +85,7 @@ class VTKReader:
         fid = open(file, "rb")
 
         # define our datastructure
-        f32_be = np.dtype(">f")  # Big endian single precision floats
+        f32_be = np.dtype(">f4")  # Big endian single precision floats
         V = BinData.default_init(dtype=f32_be)
 
         # initialize geometry

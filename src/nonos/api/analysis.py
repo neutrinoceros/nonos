@@ -327,7 +327,7 @@ class GasField(Generic[D, F]):
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField[D, F]":
+    def replace(self, **substitutions: Unpack[GasFieldAttrs[D, F]]) -> "GasField[D, F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -339,6 +339,10 @@ class GasField(Generic[D, F]):
     def shape(self) -> tuple[int, int, int]:
         i, j, k = (max(1, n - 1) for n in self.coordinates.shape)
         return i, j, k
+
+    @property
+    def dtype(self) -> np.dtype[F]:
+        return self.loader.dtype
 
     def map(
         self,
@@ -645,7 +649,6 @@ class GasField(Generic[D, F]):
                 R = self.coordinates.get_axis_array_med("R")
                 z = self.coordinates.get_axis_array_med("z")
                 integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
-                # integral = np.zeros((self.shape[0],self.shape[2]), dtype='>f4')
                 for i in range(self.shape[0]):
                     km = find_nearest(z, z.min())
                     kp = find_nearest(z, z.max())
@@ -700,7 +703,7 @@ class GasField(Generic[D, F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -814,7 +817,7 @@ class GasField(Generic[D, F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -869,7 +872,7 @@ class GasField(Generic[D, F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1112,7 +1115,7 @@ class GasField(Generic[D, F]):
 
         ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
