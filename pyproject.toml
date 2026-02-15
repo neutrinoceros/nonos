@@ -70,7 +70,6 @@ covcheck = [
 ]
 typecheck = [
     "nonos[all]",
-    "matplotlib>=3.8.0",
     "mypy>=1.13.0",
     "scipy-stubs>=1.15.3.0",
 ]
