@@ -9,7 +9,7 @@ import numpy as np
 from packaging.version import Version
 
 from nonos._geometry import Coordinates
-from nonos._types import D, F, FArray, FArray2D, FArray3D, StrDict
+from nonos._types import F, FArray2D, FArray3D, StrDict
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -217,7 +217,7 @@ class NonosLick(Generic[F]):
 )
 def compute(
     field: str,
-    data: FArray[D, F],
+    data: FArray3D[F],
     ref: GasField[F],
 ) -> GasField[F]:
     return ref.replace(name=field, data=data)

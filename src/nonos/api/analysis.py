@@ -214,9 +214,9 @@ def _find_planet_azimuth(
     return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
 
-class GasFieldAttrs(Generic[D, F], TypedDict, total=False):
+class GasFieldAttrs(Generic[F], TypedDict, total=False):
     name: str
-    data: FArray[D, F]
+    data: FArray3D[F]
     coordinates: Coordinates[F]
     native_geometry: Geometry
     output_number: int
