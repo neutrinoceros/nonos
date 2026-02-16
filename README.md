@@ -4,16 +4,18 @@
 [![Documentation Status](https://readthedocs.org/projects/nonos/badge/?version=latest)](https://nonos.readthedocs.io/en/latest/?badge=latest)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-nonos is a Python 2D visualization library for planet-disk numerical simulations.
+`nonos` is a Python 2D visualization library for planet-disk numerical simulations.
+
 It supports vtk-formatted data from Pluto and Idefix, and dat-formatted data for Fargo-adsg and Fargo3D.
 
+This page illustrates basic examples.
 For more, read [the documentation !](https://nonos.readthedocs.io/en/latest/?badge=latest)
 
 ##### Data Formats
-We list here the accepted formats for the data:
-Pluto and Idefix: data.\*\*\*\*.vtk
-Fargo-adsg: gasdens.dat, gasvy\*.dat, gasvx\*.dat
-Fargo3D: same as Fargo-adsg + gasvz\*.dat
+`nonos` supports the following data formats
+- Pluto and Idefix: `data.*.vtk`
+- Fargo-adsg: `gasdens.dat`, `gasvy*.dat`, `gasvx*.dat`
+- Fargo3D: same as Fargo-adsg + `gasvz\*.dat`
 
 ## Development status
 
@@ -28,7 +30,7 @@ breaks.
 
 ## Installation
 
-Get nonos and its minimal set of dependencies as
+Get `nonos` and its minimal set of dependencies as
 
 ```shell
 python -m pip install nonos
@@ -39,50 +41,74 @@ Optionally, you can install with the companion command line interface too
 python -m pip install "nonos[cli]"
 ```
 
-or, to also get all optional dependencies (CLI included)
+or, to get *all* optional dependencies (CLI included)
 ```shell
 python -m pip install "nonos[all]"
 ```
 
-## Usage
+## Examples
 
-```python
-from nonos.api import GasDataSet
+## Building a 2D map
+
+We'll start by defining a `GasDataSet` object
+```py
+import nonos as nn
+
+ds = nn.GasDataSet(
+    43,
+    geometry="polar",
+    directory="tests/data/idefix_planet3d",
+)
+```
+
+We can select the `RHO` field, reduce it to a vertical
+slice in the midplane, and derive a `Plotable` object mapping the cartesian `'x', 'y'` plane,
+all while ensuring the 0th planet lies close to azimuth 0
+```py
+p = (
+    ds["RHO"]
+    .vertical_at_midplane()
+    .map("x", "y", rotate_with="planet0.dat")
+)
+```
+
+Now let's actually visualize our results
+```py
 import matplotlib.pyplot as plt
 
-plt.close("all")
-# We use GasDataSet which takes as argument the output number of the output file given by idefix/pluto/fargo
-# contains in particular a dictionary with the different fields.
-ds = GasDataSet(43, geometry="polar", directory="nonos/tests/data/idefix_planet3d")
-# We select the GasField "RHO", then
-# we perform a vertical slice in the midplane,
-# and make the result plotable in the xy plane,
-# rotating the grid given the planet number 0
-# (which orbit is described in the planet0.dat file).
-dsop = ds["RHO"].vertical_at_midplane().map("x", "y", planet_corotation=0)
 fig, ax = plt.subplots()
-# dsop is now a Plotable object.
-# We represent its log10, with a given colormap,
-# and we display the colorbar by adding the argument title.
-dsop.plot(fig, ax, log=True, cmap="inferno", title=r"$\rho_{\rm mid}$")
 ax.set_aspect("equal")
 
-# This time, we perform a latitudinal projection,
-# i.e. the integral of "RHO" between -theta and theta,
-# and then an azimuthal average,
-# before mapping it in the radial ("R") direction.
-dsop = ds["RHO"].latitudinal_projection(theta=3*0.05).azimuthal_average().map("R")
+p.plot(
+    fig,
+    ax,
+    log=True,
+    cmap="inferno",
+    title=r"$\rho_{\rm mid}$",
+)
+```
+
+## Visualizing a 1D graph
+
+This time, we'll reduce the `RHO` field to a single dimension,
+via a latitudinal projection, followed by an azimuthal average,
+and map the result to the radial axis.
+```py
 fig, ax = plt.subplots()
-# We display the y-axis by adding the argument title.
-dsop.plot(fig, ax, c="k", title=r"$\Sigma$")
-plt.show()
+(
+    ds["RHO"]
+    .latitudinal_projection(theta=3*0.05)
+    .azimuthal_average()
+    .map("R")
+    .plot(fig, ax, c="black", title=r"$\Sigma$")
+)
 ```
 
 
 ### Reusing `nonos`' style
 *requires matplotlib >= 3.7*
 
-`nonos` CLI uses a custom style that can be reused programmatically, without
+`nonos-cli` uses a custom style that can be reused programmatically, without
 importing the package, using matplotlib API
 ```python
 import matplotlib.pyplot as plt
