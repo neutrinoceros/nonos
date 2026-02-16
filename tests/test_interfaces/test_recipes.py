@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from nonos._types import BinData, IniData, PlanetData
-from nonos.loaders import Loader, loader_from
+from nonos.loaders import Loader
 
 
 def validate_dataclass_instance(instance, cls):
@@ -42,7 +42,7 @@ class CheckLoader:
 
     @pytest.fixture
     def initloader(self, test_data_dir):
-        loader = loader_from(
+        loader = Loader.resolve(
             code=self.code,
             parameter_file=test_data_dir.joinpath(*self.parameter_file),
         )
@@ -51,7 +51,7 @@ class CheckLoader:
 
     def test_binary_files(self, initloader):
         loader, directory = initloader
-        reader = loader.binary_reader
+        reader = loader.components.binary_reader
         files = reader.get_bin_files(directory)
         assert len(files) == self.expected_n_bin_files
 
@@ -59,7 +59,7 @@ class CheckLoader:
         loader, directory = initloader
         if self.expected_n_bin_files == 0:  # pragma: no cover
             pytest.skip("no actual data in store")
-        reader = loader.binary_reader
+        reader = loader.components.binary_reader
 
         files = reader.get_bin_files(directory)
         gd = loader.load_bin_data(files[0], **self.meta)
@@ -68,7 +68,7 @@ class CheckLoader:
 
     def test_planet_files(self, initloader):
         loader, directory = initloader
-        reader = loader.planet_reader
+        reader = loader.components.planet_reader
 
         if self.expected_n_planet_files is None:
             ctx = pytest.raises(NotImplementedError)
@@ -83,7 +83,7 @@ class CheckLoader:
         loader, directory = initloader
         if self.expected_n_planet_files == 0:  # pragma: no cover
             pytest.skip("no actual data in store")
-        reader = loader.planet_reader
+        reader = loader.components.planet_reader
 
         if self.expected_n_planet_files is None:
             file = tmp_path / "not_a_file"

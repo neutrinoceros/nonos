@@ -6,7 +6,7 @@ import pytest
 
 from nonos._geometry import Coordinates, Geometry
 from nonos.api import GasDataSet, GasField, file_analysis
-from nonos.loaders import loader_from
+from nonos.loaders import Loader
 
 
 def test_gasfield_immutable_data(test_data_dir):
@@ -22,7 +22,7 @@ def test_gasfield_immutable_data(test_data_dir):
         ),
         native_geometry=Geometry.CARTESIAN,
         output_number=0,
-        loader=loader_from(
+        loader=Loader.resolve(
             directory=test_data_dir / "idefix_planet3d",
         ),
     )

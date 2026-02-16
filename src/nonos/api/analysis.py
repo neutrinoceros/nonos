@@ -29,7 +29,7 @@ from nonos.api._angle_parsing import (
     _resolve_rotate_by,
 )
 from nonos.api.tools import find_around, find_nearest
-from nonos.loaders import BUILTIN_RECIPES, Loader, loader_from, recipe_from
+from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 11):
     from typing import TypedDict, Unpack, assert_never
@@ -209,7 +209,7 @@ def _find_planet_azimuth(
     planet_file: str,
 ) -> float:
     data_dir = loader.parameter_file.parent
-    pd = loader.planet_reader.read(data_dir / planet_file)
+    pd = loader.load_planet_data(data_dir / planet_file)
     ind_on = _get_ind_output_number(loader, output_number, pd.t)
     return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
@@ -256,7 +256,7 @@ class GasField(Generic[F]):
         rotate_by: float | None = None,
         rotate_with: str | None = None,
     ) -> "GasField[F]":
-        loader = loader_from(
+        loader = Loader.resolve(
             code=code,
             parameter_file=inifile,
             directory=Path.cwd() if directory is None else Path(directory),
@@ -353,7 +353,7 @@ class GasField(Generic[F]):
 
     @property
     def dtype(self) -> np.dtype[F]:
-        return self.loader.dtype
+        return self.loader.components.dtype
 
     def map(
         self,
@@ -1287,24 +1287,19 @@ class GasDataSet(Generic[D, F]):
         else:
             directory = Path(directory)
 
-        recipe = recipe_from(
+        loader = Loader.resolve(
             code=code,
             parameter_file=inifile,
             directory=directory,
         )
 
-        if fluid is not None and recipe != BUILTIN_RECIPES["fargo3d"]:
+        if fluid is not None and loader.components != BUILTIN_RECIPES["fargo3d"]:
             warnings.warn(
                 "Unused keyword argument: 'fluid'",
                 category=UserWarning,
                 stacklevel=2,
             )
 
-        loader = loader_from(
-            code=code,
-            parameter_file=inifile,
-            directory=directory,
-        )
         if operation is not None:
             ignored_kwargs = []
             if fluid is not None:
@@ -1318,12 +1313,17 @@ class GasDataSet(Generic[D, F]):
                     f"when combined with 'operation': {ignored}"
                 )
                 warnings.warn(msg, UserWarning, stacklevel=2)
-            self._loader = dataclasses.replace(loader, binary_reader=NPYReader)
+            self._loader = dataclasses.replace(
+                loader,
+                components=dataclasses.replace(
+                    loader.components, binary_reader=NPYReader
+                ),
+            )
         else:
             self._loader = loader
 
         self.output_number, datafile = (
-            self._loader.binary_reader.parse_output_number_and_filename(
+            self._loader.components.binary_reader.parse_output_number_and_filename(
                 input_dataset,
                 directory=directory,
                 prefix=operation or "",
