@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 from nonos.api import GasDataSet
 from nonos.api._angle_parsing import _resolve_planet_file
-from nonos.loaders import loader_from
+from nonos.loaders import Loader
 from nonos.styling import set_mpl_style
 from nonos_cli.config import DEFAULTS
 from nonos_cli.logging import configure_logger, logger, parse_verbose_level
@@ -504,12 +504,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        loader = loader_from(directory=args["datadir"])
+        loader = Loader.resolve(directory=args["datadir"])
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         logger.error("{}", exc)
         return 1
 
-    data_files = loader.binary_reader.get_bin_files(args["datadir"])
+    data_files = loader.components.binary_reader.get_bin_files(args["datadir"])
 
     available = set()
     for fn in data_files:

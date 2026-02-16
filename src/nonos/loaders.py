@@ -1,11 +1,10 @@
 __all__ = [
+    "BUILTIN_RECIPES",
     "Loader",
-    "Recipe",
-    "loader_from",
-    "recipe_from",
 ]
 import os
-from dataclasses import asdict, dataclass
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, final
 
@@ -14,38 +13,140 @@ import numpy as np
 import nonos._readers as readers
 from nonos._types import BinReader, F, IniReader, PlanetReader
 
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
+
 if TYPE_CHECKING:
     from nonos._types import BinData, IniData, PlanetData
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class Recipe(Generic[F]):
+class Readers(Generic[F]):
+    """
+    Parameters
+    ----------
+      binary_reader: type[BinReader]
+        a class that implements the BinReader interface, as defined in nonos._types
+      planet_reader: type[PlanetReader]
+        a class that implements the PlanetReader interface, as defined in nonos._types
+      ini_reader: type[IniReader]
+        a class that implements the IniReader interface, as defined in nonos._types
+      dtype: numpy.dtype
+    """
+
     binary_reader: type[BinReader[F]]
     planet_reader: type[PlanetReader[F]]
     ini_reader: type[IniReader]
     dtype: np.dtype[F]
 
+    @staticmethod
+    def _code_to_recipe(code: str, /) -> "Readers[Any]":
+        if code in ("pluto", "idefix"):
+            # backward compatibility layer
+            # this could be deprecated at some point
+            new_code = f"{code}-vtk"
+        else:
+            new_code = code
+        new_code = new_code.replace("_", "-")
+        if new_code not in BUILTIN_RECIPES:
+            raise ValueError(f"{code=!r} is not supported")
+        return BUILTIN_RECIPES[new_code]
+
+    @classmethod
+    def resolve(
+        cls,
+        *,
+        code: str | None = None,
+        parameter_file: os.PathLike[str] | None = None,
+        directory: os.PathLike[str] | None = None,
+    ) -> "Readers[Any]":
+        r"""
+        Determine an appropriate loader recipe from user input.
+
+        Parameters
+        ----------
+        code: str (optional)
+            This string should match a Readers enum member.
+            Lower case is expected.
+            Valid values include, but are not necessarily limited to:
+            - 'idefix_vtk'
+            - 'pluto_vtk'
+            - 'fargo-adsg'
+            - 'fargo3d'
+
+        parameter_file: Path or str (optional)
+            A path to a parameter file (e.g. idefix.ini). This path can be
+            absolute or relative to the `directory` argument.
+
+        directory: Path or str (optional)
+            A path to the simulation directory.
+
+        Returns
+        -------
+        a Readers instance
+
+        Raises
+        ------
+        TypeError: if no argument is provided.
+
+        ValueError: if `code` is omitted and a working inifile reader cannot
+            be uniquely identified.
+        """
+        if code is not None:
+            return cls._code_to_recipe(code)
+
+        parameter_file = _parameter_file_from(
+            parameter_file=parameter_file,
+            directory=directory,
+        )
+
+        candidates: list[Readers[Any]] = []
+        for recipe in BUILTIN_RECIPES.values():
+            loader = Loader(components=recipe, parameter_file=parameter_file)
+            try:
+                loader.load_ini_file()
+            except Exception:
+                continue
+            else:
+                candidates.append(recipe)
+        if len(candidates) == 1:
+            return candidates[0]
+        elif len(candidates) == 0:
+            msg = (
+                f"Could not determine data format from {parameter_file=!r} "
+                "(failed to read with any loader)"
+            )
+        else:  # pragma: no cover
+            msg = (
+                f"Could not determine unambiguous data format from {parameter_file=!r} "
+                f"(found {len(candidates)} candidates {candidates})"
+            )
+
+        raise ValueError(msg)
+
 
 BUILTIN_RECIPES = {
-    "idefix-vtk": Recipe(
+    "idefix-vtk": Readers(
         binary_reader=readers.binary.VTKReader,
         planet_reader=readers.planet.IdefixReader,
         ini_reader=readers.ini.IdefixVTKReader,
         dtype=np.dtype(">f4"),
     ),
-    "pluto-vtk": Recipe(
+    "pluto-vtk": Readers(
         binary_reader=readers.binary.VTKReader,
         planet_reader=readers.planet.NullReader,
         ini_reader=readers.ini.PlutoVTKReader,
         dtype=np.dtype(">f4"),
     ),
-    "fargo3d": Recipe(
+    "fargo3d": Readers(
         binary_reader=readers.binary.Fargo3DReader,
         planet_reader=readers.planet.Fargo3DReader,
         ini_reader=readers.ini.Fargo3DReader,
         dtype=np.dtype("=f8"),
     ),
-    "fargo-adsg": Recipe(
+    "fargo-adsg": Readers(
         binary_reader=readers.binary.FargoADSGReader,
         planet_reader=readers.planet.FargoADSGReader,
         ini_reader=readers.ini.FargoADSGReader,
@@ -64,27 +165,13 @@ class Loader(Generic[F]):
     not hold any data other than a Path to a parameter file.
     All actual loading capabilities are deleguated to specialized readers.
 
-    Parameters
-    ----------
-      parameter_file: Path
-        path to an existing parameter file.
-      binary_reader: type[BinReader]
-        a class that implements the BinReader interface, as defined in nonos._types
-      planet_reader: type[PlanetReader]
-        a class that implements the PlanetReader interface, as defined in nonos._types
-      ini_reader: type[IniReader]
-        a class that implements the IniReader interface, as defined in nonos._types
-
     Raises
     ------
-      FileNotFoundError: if `parameter_file` doesn't exist or is a directory.
+    FileNotFoundError: if `parameter_file` doesn't exist or is a directory.
     """
 
+    components: Readers[F]
     parameter_file: Path
-    binary_reader: type[BinReader[F]]
-    planet_reader: type[PlanetReader[F]]
-    ini_reader: type[IniReader]
-    dtype: np.dtype[F]
 
     def __post_init__(self) -> None:
         pf = Path(self.parameter_file).resolve()
@@ -92,66 +179,89 @@ class Loader(Generic[F]):
             raise FileNotFoundError(pf)
         object.__setattr__(self, "parameter_file", pf)
 
+    @classmethod
+    def resolve(
+        cls,
+        *,
+        code: str | None = None,
+        parameter_file: os.PathLike[str] | None = None,
+        directory: os.PathLike[str] | None = None,
+    ) -> "Loader[Any]":
+        r"""
+        Compose a Loader object following a known Readers.
+
+        The exact Readers needs to be uniquely identifiable from the parameters.
+
+        Parameters
+        ----------
+        code: str (optional)
+            This string should match a Readers enum member.
+            Lower case is expected.
+            Valid values include, but are not necessarily limited to:
+            - 'idefix_vtk'
+            - 'pluto_vtk'
+            - 'fargo-adsg'
+            - 'fargo3d'
+
+        parameter_file: Path or str (optional)
+            A path to a parameter file (e.g. idefix.ini). This path can be
+            absolute or relative to the `directory` argument.
+
+        directory: Path or str (optional)
+            A path to the simulation directory.
+
+        Raises
+        ------
+        TypeError: if no argument is provided.
+        """
+        parameter_file = _parameter_file_from(
+            parameter_file=parameter_file,
+            directory=directory,
+        )
+        return cls(
+            components=Readers.resolve(
+                code=code,
+                parameter_file=parameter_file,
+                directory=directory,
+            ),
+            parameter_file=parameter_file,
+        )
+
     def load_bin_data(self, file: os.PathLike[str], /, **meta: Any) -> "BinData[F]":
         ini = self.load_ini_file()
         meta = ini.meta | meta
-        return self.binary_reader.read(file, **meta)
+        return self.components.binary_reader.read(file, **meta)
 
     def load_planet_data(self, file: os.PathLike[str]) -> "PlanetData[F]":
-        return self.planet_reader.read(file)
+        return self.components.planet_reader.read(file)
 
     def load_ini_file(self) -> "IniData":
-        return self.ini_reader.read(self.parameter_file)
+        return self.components.ini_reader.read(self.parameter_file)
+
+    @property
+    @deprecated(
+        "Loader.binary_reader is now a deprecated shorthand for "
+        "Loader.components.binary_reader. Deprecated since v0.20.0, "
+        "and might be removed in a future version."
+    )
+    def binary_reader(self) -> type[BinReader[F]]:  # pragma: no cover
+        # backward compat for nonos-cli 0.1.0
+        return self.components.binary_reader
 
 
+@deprecated(
+    "nonos.loaders.loader_from is deprecated since v0.20.0, "
+    "and might be removed in a future version. "
+    "Use nonos.loaders.Loader.resolve instead."
+)
 def loader_from(
     *,
     code: str | None = None,
     parameter_file: os.PathLike[str] | None = None,
     directory: os.PathLike[str] | None = None,
-) -> Loader:
-    r"""
-    Compose a Loader object following a known Recipe.
-
-    The exact Recipe needs to be uniquely identifiable from the parameters.
-
-    Parameters
-    ----------
-      code: str (optional)
-        This string should match a Recipe enum member.
-        Lower case is expected.
-        Valid values include, but are not necessarily limited to:
-        - 'idefix_vtk'
-        - 'pluto_vtk'
-        - 'fargo-adsg'
-        - 'fargo3d'
-
-      parameter_file: Path or str (optional)
-        A path to a parameter file (e.g. idefix.ini). This path can be
-        absolute or relative to the `directory` argument.
-
-      directory: Path or str (optional)
-        A path to the simulation directory.
-
-    Raises
-    ------
-      TypeError: if no argument is provided.
-    """
-    return _compose_loader(
-        recipe_from(
-            code=code,
-            parameter_file=parameter_file,
-            directory=directory,
-        ),
-        _parameter_file_from(
-            parameter_file=parameter_file,
-            directory=directory,
-        ),
-    )
-
-
-def _compose_loader(recipe: Recipe[F], /, parameter_file: Path) -> Loader[F]:
-    return Loader(parameter_file, **asdict(recipe))
+) -> "Loader[Any]":
+    # backward compat for nonos-cli 0.1.0
+    return Loader.resolve(code=code, parameter_file=parameter_file, directory=directory)
 
 
 def _parameter_file_from(
@@ -195,87 +305,3 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
             f"Found multiple parameter files in {directory}\n - "
             + "\n - ".join(str(c) for c in candidates)
         )
-
-
-def recipe_from(
-    *,
-    code: str | None = None,
-    parameter_file: os.PathLike[str] | None = None,
-    directory: os.PathLike[str] | None = None,
-) -> Recipe[Any]:
-    r"""
-    Determine an appropriate loader recipe from user input.
-
-    Parameters
-    ----------
-      code: str (optional)
-        This string should match a Recipe enum member.
-        Lower case is expected.
-        Valid values include, but are not necessarily limited to:
-        - 'idefix_vtk'
-        - 'pluto_vtk'
-        - 'fargo-adsg'
-        - 'fargo3d'
-
-      parameter_file: Path or str (optional)
-        A path to a parameter file (e.g. idefix.ini). This path can be
-        absolute or relative to the `directory` argument.
-
-      directory: Path or str (optional)
-        A path to the simulation directory.
-
-    Returns
-    -------
-       a Recipe enum member
-
-    Raises
-    ------
-      TypeError: if no argument is provided.
-
-      ValueError: if `code` is omitted and a working inifile reader cannot
-        be uniquely identified.
-    """
-    if code is not None:
-        return _code_to_recipe(code)
-
-    parameter_file = _parameter_file_from(
-        parameter_file=parameter_file,
-        directory=directory,
-    )
-
-    recipe_candidates: list[Recipe[Any]] = []
-    for recipe in BUILTIN_RECIPES.values():
-        loader = _compose_loader(recipe, parameter_file)
-        try:
-            loader.load_ini_file()
-        except Exception:
-            continue
-        else:
-            recipe_candidates.append(recipe)
-    if len(recipe_candidates) == 1:
-        return recipe_candidates[0]
-    elif len(recipe_candidates) == 0:
-        msg = (
-            f"Could not determine data format from {parameter_file=!r} "
-            "(failed to read with any loader)"
-        )
-    else:  # pragma: no cover
-        msg = (
-            f"Could not determine unambiguous data format from {parameter_file=!r} "
-            f"(found {len(recipe_candidates)} candidates {recipe_candidates})"
-        )
-
-    raise ValueError(msg)
-
-
-def _code_to_recipe(code: str, /) -> Recipe[Any]:
-    if code in ("pluto", "idefix"):
-        # backward compatibility layer
-        # this could be deprecated at some point
-        new_code = f"{code}-vtk"
-    else:
-        new_code = code
-    new_code = new_code.replace("_", "-")
-    if new_code not in BUILTIN_RECIPES:
-        raise ValueError(f"{code=!r} is not supported")
-    return BUILTIN_RECIPES[new_code]

@@ -11,7 +11,7 @@ from packaging.version import Version
 from nonos._geometry import Coordinates
 from nonos._types import F, FArray2D, FArray3D, StrDict
 from nonos.api.analysis import GasField, Plotable
-from nonos.loaders import BUILTIN_RECIPES, loader_from, recipe_from
+from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -41,15 +41,17 @@ def file_analysis(
     if norb is None:
         return columns  # type: ignore[no-any-return]
 
-    loader = loader_from(
+    loader = Loader.resolve(
         code=code,
         parameter_file=inifile,
         directory=directory,
     )
-    recipe = recipe_from(code=code, parameter_file=inifile, directory=directory)
     ini = loader.load_ini_file().meta
 
-    if recipe == BUILTIN_RECIPES["idefix-vtk"] and "analysis" in ini["Output"]:
+    if (
+        loader.components == BUILTIN_RECIPES["idefix-vtk"]
+        and "analysis" in ini["Output"]
+    ):
         analysis = ini["Output"]["analysis"]
         rpini = ini["Planet"]["dpl"]
         Ntmean = round(norb * 2 * np.pi * pow(rpini, 1.5) / analysis)
@@ -63,9 +65,7 @@ def file_analysis(
             for i, column in enumerate(columns):
                 columns[i] = np.convolve(column, Ntmean, mode="valid")
     else:
-        raise NotImplementedError(
-            f"moving average on {norb} orbits is not implemented for the recipe {recipe}"
-        )
+        raise NotImplementedError
     return columns  # type: ignore[no-any-return]
 
 
