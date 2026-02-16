@@ -128,8 +128,6 @@ deprecated = "ignore"
 [tool.mypy]
 python_version = "3.10"
 strict = true
-# temporary overrides to strict mode
-disallow_any_generics = false # 3 errors
 
 # permanent overrides to strict mode
 # last checked, this only flagged Enum.__call__ used on final classes,,

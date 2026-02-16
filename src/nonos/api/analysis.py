@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any, Generic, Literal, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, cast, overload
 
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
@@ -22,7 +22,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import D, F, FArray, FArray1D, FArray3D, PlanetData
+from nonos._types import D1, D2, D, F, FArray, FArray1D, FArray3D, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
     _resolve_planet_file,
@@ -355,15 +355,35 @@ class GasField(Generic[F]):
     def dtype(self) -> np.dtype[F]:
         return self.loader.components.dtype
 
+    @overload
     def map(
         self,
         a: str,
-        b: str | None = None,
+        b: None,
         /,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-        planet_corotation: int | None = None,  # deprecated
-    ) -> Plotable:
+        planet_corotation: int | None = None,
+    ) -> Plotable[D1, F]: ...
+    @overload
+    def map(
+        self,
+        a: str,
+        b: str,
+        /,
+        rotate_by: float | None = None,
+        rotate_with: str | None = None,
+        planet_corotation: int | None = None,
+    ) -> Plotable[D2, F]: ...
+    def map(  # type: ignore[no-untyped-def]
+        self,
+        a,
+        b=None,
+        /,
+        rotate_by=None,
+        rotate_with=None,
+        planet_corotation=None,  # deprecated
+    ):
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
