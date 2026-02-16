@@ -268,7 +268,7 @@ def recipe_from(
     raise ValueError(msg)
 
 
-def _code_to_recipe(code: str, /) -> Recipe[F]:
+def _code_to_recipe(code: str, /) -> Recipe[Any]:
     if code in ("pluto", "idefix"):
         # backward compatibility layer
         # this could be deprecated at some point
