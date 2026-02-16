@@ -22,7 +22,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import D, F, FArray, FArray1D, PlanetData
+from nonos._types import D, F, FArray, FArray1D, FArray3D, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
     _resolve_planet_file,
@@ -226,9 +226,9 @@ class GasFieldAttrs(Generic[D, F], TypedDict, total=False):
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class GasField(Generic[D, F]):
+class GasField(Generic[F]):
     name: str
-    data: FArray[D, F]
+    data: FArray3D[F]
     coordinates: Coordinates[F]
     native_geometry: Geometry
     output_number: int
@@ -244,7 +244,7 @@ class GasField(Generic[D, F]):
     def _legacy_init(
         cls,
         field: str,
-        data: FArray[D, F],
+        data: FArray3D[F],
         coords: Coordinates[F],
         ngeom: str,
         on: int,
@@ -255,7 +255,7 @@ class GasField(Generic[D, F]):
         directory: os.PathLike[str] | None = None,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         loader = loader_from(
             code=code,
             parameter_file=inifile,
@@ -327,7 +327,7 @@ class GasField(Generic[D, F]):
     def directory(self) -> Path:
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField[D, F]":
+    def replace(self, **substitutions: Unpack[GasFieldAttrs]) -> "GasField[F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -625,7 +625,7 @@ class GasField(Generic[D, F]):
         theta: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         default_suffix = "latitudinal_projection"
         if theta is not None:
             default_suffix += str(np.pi / 2 - theta)
@@ -719,7 +719,7 @@ class GasField(Generic[D, F]):
         z: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         default_suffix = "vertical_projection"
         if z is not None:
             default_suffix += str(z)
@@ -785,7 +785,7 @@ class GasField(Generic[D, F]):
         self,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="vertical_at_midplane",
@@ -833,7 +833,7 @@ class GasField(Generic[D, F]):
         theta: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
@@ -888,7 +888,7 @@ class GasField(Generic[D, F]):
         z: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"vertical_at_z{z}",
@@ -930,7 +930,7 @@ class GasField(Generic[D, F]):
         phi: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"azimuthal_at_phi{phi}",
@@ -973,7 +973,7 @@ class GasField(Generic[D, F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
@@ -989,9 +989,7 @@ class GasField(Generic[D, F]):
         aziphip = self.azimuthal_at_phi(phi=phip)
         return aziphip.replace(operation=operation)
 
-    def azimuthal_average(
-        self, *, operation_name: str | None = None
-    ) -> "GasField[D, F]":
+    def azimuthal_average(self, *, operation_name: str | None = None) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="azimuthal_average",
@@ -1035,7 +1033,7 @@ class GasField(Generic[D, F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
@@ -1093,7 +1091,7 @@ class GasField(Generic[D, F]):
         distance: float = 1.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"radial_at_r{distance}",
@@ -1132,7 +1130,7 @@ class GasField(Generic[D, F]):
         vmax: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         if (vmin is None) or (vmax is None):
             raise ValueError(
                 f"The radial interval {vmin=} and {vmax=} should be defined"
@@ -1184,7 +1182,7 @@ class GasField(Generic[D, F]):
             operation=operation,
         )
 
-    def diff(self, on_2: int) -> "GasField[D, F]":
+    def diff(self, on_2: int) -> "GasField[F]":
         ds_2 = GasDataSet(
             on_2,
             geometry=self.native_geometry,
@@ -1204,7 +1202,7 @@ class GasField(Generic[D, F]):
         *,
         rotate_with: str | None = None,
         rotate_by: float | None = None,
-    ) -> "GasField[D, F]":
+    ) -> "GasField[F]":
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
@@ -1342,8 +1340,8 @@ class GasDataSet(Generic[D, F]):
             self._read.x2,
             self._read.x3,
         )
-        raw_data: dict[str, FArray[D, F]] = self._read.data
-        self.dict: dict[str, GasField[D, F]] = {}
+        raw_data: dict[str, FArray3D[F]] = self._read.data
+        self.dict: dict[str, GasField[F]] = {}
         for key, array in raw_data.items():
             self.dict[key] = GasField._legacy_init(
                 key,
@@ -1386,7 +1384,7 @@ class GasDataSet(Generic[D, F]):
     def coords(self) -> Coordinates[F]:
         return self.coordinates
 
-    def __getitem__(self, key: str) -> "GasField[D, F]":
+    def __getitem__(self, key: str) -> "GasField[F]":
         if key in self.dict:
             return self.dict[key]
         else:
@@ -1400,7 +1398,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.keys()
 
-    def values(self) -> ValuesView["GasField[D, F]"]:
+    def values(self) -> ValuesView["GasField[F]"]:
         """
         Returns
         =======
@@ -1408,7 +1406,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.values()
 
-    def items(self) -> ItemsView[str, "GasField[D, F]"]:
+    def items(self) -> ItemsView[str, "GasField[F]"]:
         """
         Returns
         =======
