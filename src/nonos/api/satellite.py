@@ -3,13 +3,13 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
+from typing import TYPE_CHECKING, Generic, Literal, TypeAlias, cast
 
 import numpy as np
 from packaging.version import Version
 
 from nonos._geometry import Coordinates
-from nonos._types import D2, D, F, FArray, FArray2D, StrDict
+from nonos._types import D, F, FArray, FArray2D, FArray3D, StrDict
 from nonos.api.analysis import GasField, Plotable
 from nonos.loaders import Recipe, loader_from, recipe_from
 
@@ -77,9 +77,9 @@ class NonosLick(Generic[F]):
         self,
         x: FArray2D[F],
         y: FArray2D[F],
-        lx: GasField[D2, F],
-        ly: GasField[D2, F],
-        field: GasField[D2, F],
+        lx: GasField[F],
+        ly: GasField[F],
+        field: GasField[F],
         *,
         xmin: float | None = None,
         xmax: float | None = None,
@@ -119,6 +119,11 @@ class NonosLick(Generic[F]):
         self.ymin = ymin
         self.ymax = ymax
 
+        if lx.effective_dim != 2 or ly.effective_dim != 2 or field.effective_dim != 2:
+            raise TypeError(
+                "Expected GasField inputs with effective dimensionality of exactly 2"
+            )
+
         # (x,y) are 2D meshgrids at cell centers
         self.X: FArray2D[F]
         self.Y: FArray2D[F]
@@ -129,9 +134,9 @@ class NonosLick(Generic[F]):
         self.X, self.Y, self.LINE1, self.LINE2, self.F, self.lick = lick_box(
             x,
             y,
-            lx.data,
-            ly.data,
-            field.data,
+            cast(FArray2D[F], lx.data.squeeze()),
+            cast(FArray2D[F], ly.data.squeeze()),
+            cast(FArray2D[F], field.data.squeeze()),
             xmin=self.xmin,
             xmax=self.xmax,
             ymin=self.ymin,
@@ -213,8 +218,8 @@ class NonosLick(Generic[F]):
 def compute(
     field: str,
     data: FArray[D, F],
-    ref: GasField[D, F],
-) -> GasField[D, F]:
+    ref: GasField[F],
+) -> GasField[F]:
     return ref.replace(name=field, data=data)
 
 
@@ -226,14 +231,14 @@ def compute(
 def from_data(
     *,
     field: str,
-    data: FArray[D, F],
+    data: FArray3D[F],
     coords: Coordinates[F],
     on: int,
     operation: str,
     inifile: os.PathLike[str] | None = None,
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
-) -> GasField[D, F]:  # pragma: no cover
+) -> GasField[F]:  # pragma: no cover
     return GasField._legacy_init(
         field,
         data,
@@ -253,7 +258,7 @@ def from_file(
     operation: str,
     on: int,
     directory: os.PathLike[str] | None = None,
-) -> GasField[D, F]:
+) -> GasField[F]:
     if directory is None:
         directory = Path.cwd()
     else:
