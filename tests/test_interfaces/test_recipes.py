@@ -131,7 +131,7 @@ class TestFargo3DLoader(CheckLoader):
 
 
 class TestFargoADSGLoader(CheckLoader):
-    code = "fargo_adsg"
+    code = "fargo-adsg"
     parameter_file = ("fargo_adsg_planet", "planetpendragon_200k.par")
     meta = {}
     expected_n_bin_files = 1
