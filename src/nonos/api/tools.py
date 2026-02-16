@@ -1,19 +1,32 @@
+import sys
+
 import numpy as np
 
-from nonos._types import D, F, FArray
+from nonos._types import F, FArray1D
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 
-def find_nearest(array: FArray[D, F], value: float) -> int:
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return int(idx)
+@deprecated(
+    "nonos.api.tools.find_nearest is deprecated since v0.20.0 "
+    "and may be removed in a future version. There are no "
+    "plans for a replacement in the public API. "
+)
+def find_nearest(array: FArray1D[F], value: float) -> int:
+    from nonos._approx import closest_index
+
+    return closest_index(array, value)
 
 
-def find_around(array: FArray[D, F], value: float) -> FArray[D, F]:
-    array = np.asarray(array)
-    idx_1 = (np.abs(array - value)).argmin()
-    larray = list(array)
-    larray.remove(larray[idx_1])
-    arraym = np.asarray(larray)
-    idx_2 = (np.abs(arraym - value)).argmin()
-    return np.asarray([array[idx_1], arraym[idx_2]])
+@deprecated(
+    "nonos.api.tools.find_around is deprecated since v0.20.0 "
+    "and may be removed in a future version. There are no "
+    "plans for a replacement in the public API. "
+)
+def find_around(array: FArray1D[F], value: float) -> FArray1D[F]:
+    from nonos._approx import bracketing_values
+
+    return np.array(bracketing_values(array, value))

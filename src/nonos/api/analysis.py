@@ -15,6 +15,7 @@ import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
 from matplotlib.ticker import SymmetricalLogLocator
 
+from nonos._approx import bracketing_values, closest_index, closest_value
 from nonos._geometry import (
     Axis,
     Coordinates,
@@ -28,7 +29,6 @@ from nonos.api._angle_parsing import (
     _resolve_planet_file,
     _resolve_rotate_by,
 )
-from nonos.api.tools import find_around, find_nearest
 from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 11):
@@ -199,7 +199,7 @@ def _get_ind_output_number(
 ) -> int:
     ini = loader.load_ini_file()
     target_time = ini.output_time_interval * output_number
-    return find_nearest(time, target_time)
+    return closest_index(time, target_time)
 
 
 def _find_planet_azimuth(
@@ -409,11 +409,11 @@ class GasField(Generic[F]):
             abscissa_key = list(meshgrid_conversion.keys())[0]
             if axis_1 is Axis.AZIMUTH and not _fequal(self.rotate_by, rotate_by):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
-                ipi = find_nearest(phicoord, 0)
-                if abs(0 - phicoord[ipi]) > abs(
-                    np.ediff1d(find_around(phicoord, 0))[0]
-                ):
-                    ipi = find_nearest(phicoord, 2 * np.pi)
+                bv = bracketing_values(phicoord, 0)
+                if abs(closest_value(phicoord, 0)) > bv.span:
+                    ipi = closest_index(phicoord, 2 * np.pi)
+                else:
+                    ipi = closest_index(phicoord, 0)
                 match self.native_geometry:
                     case Geometry.POLAR:
                         data_view = np.roll(self.data, -ipi + 1, axis=1)
@@ -449,14 +449,11 @@ class GasField(Generic[F]):
                 self.rotate_by, rotate_by
             ):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
-                # ipi = find_nearest(phicoord, np.pi)
-                # if (abs(np.pi-phicoord[ipi])>abs(np.ediff1d(find_around(phicoord, np.pi))[0])):
-                #     ipi = find_nearest(phicoord, -np.pi)
-                ipi = find_nearest(phicoord, 0)
-                if abs(0 - phicoord[ipi]) > abs(
-                    np.ediff1d(find_around(phicoord, 0))[0]
-                ):
-                    ipi = find_nearest(phicoord, 2 * np.pi)
+                bv = bracketing_values(phicoord, 0)
+                if abs(closest_value(phicoord, 0)) > bv.span:
+                    ipi = closest_index(phicoord, 2 * np.pi)
+                else:
+                    ipi = closest_index(phicoord, 0)
                 match self.native_geometry:
                     case Geometry.POLAR:
                         data_view = np.roll(self.data, -ipi + 1, axis=1)
@@ -541,12 +538,12 @@ class GasField(Generic[F]):
     def find_ir(self, distance: float = 1.0) -> int:
         match self.native_geometry:
             case Geometry.POLAR:
-                return find_nearest(
+                return closest_index(
                     self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS),
                     distance,
                 )
             case Geometry.SPHERICAL:
-                return find_nearest(
+                return closest_index(
                     self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS),
                     distance,
                 )
@@ -559,10 +556,10 @@ class GasField(Generic[F]):
         match self.native_geometry:
             case Geometry.CARTESIAN | Geometry.POLAR:
                 arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-                return find_nearest(arr, altitude)
+                return closest_index(arr, altitude)
             case Geometry.SPHERICAL:
                 arr = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
-                return find_nearest(arr, np.pi / 2 - altitude)
+                return closest_index(arr, np.pi / 2 - altitude)
             case _ as unreachable:
                 assert_never(unreachable)
 
@@ -571,7 +568,7 @@ class GasField(Generic[F]):
             case Geometry.POLAR | Geometry.SPHERICAL:
                 phiarr = self.coordinates.get_axis_array(Axis.AZIMUTH)
                 mod = len(phiarr) - 1
-                return find_nearest(phiarr, phi) % mod
+                return closest_index(phiarr, phi) % mod
             case Geometry.CARTESIAN:
                 raise NotImplementedError
             case _ as unreachable:
@@ -670,20 +667,20 @@ class GasField(Generic[F]):
                     self.native_geometry,
                     self.coordinates.get_axis_array("R"),
                     self.coordinates.get_axis_array("phi"),
-                    find_around(
+                    bracketing_values(
                         self.coordinates.get_axis_array("z"),
                         self.coordinates.get_axis_array_med("z")[imid],
-                    ),
+                    ).as_array(dtype=self.dtype),
                 )
                 R = self.coordinates.get_axis_array_med("R")
                 z = self.coordinates.get_axis_array_med("z")
                 integral = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
                 for i in range(self.shape[0]):
-                    km = find_nearest(z, z.min())
-                    kp = find_nearest(z, z.max())
+                    km = closest_index(z, z.min())
+                    kp = closest_index(z, z.max())
                     if theta is not None:
-                        km = find_nearest(z, -R[i] * theta)
-                        kp = find_nearest(z, R[i] * theta)
+                        km = closest_index(z, -R[i] * theta)
+                        kp = closest_index(z, R[i] * theta)
                     integral[i, :] = (
                         self.data[i, :, :]
                         * np.ediff1d(self.coordinates.get_axis_array("z"))[None, :]
@@ -693,25 +690,25 @@ class GasField(Generic[F]):
                 ret_coords = Coordinates(
                     self.native_geometry,
                     self.coordinates.get_axis_array("r"),
-                    find_around(
+                    bracketing_values(
                         self.coordinates.get_axis_array("theta"),
                         self.coordinates.get_axis_array_med("theta")[imid],
-                    ),
+                    ).as_array(dtype=self.dtype),
                     self.coordinates.get_axis_array("phi"),
                 )
-                km = find_nearest(
+                km = closest_index(
                     self.coordinates.get_axis_array("theta"),
                     self.coordinates.get_axis_array("theta").min(),
                 )
-                kp = find_nearest(
+                kp = closest_index(
                     self.coordinates.get_axis_array("theta"),
                     self.coordinates.get_axis_array("theta").max(),
                 )
                 if theta is not None:
-                    kp = find_nearest(
+                    kp = closest_index(
                         self.coordinates.get_axis_array("theta"), np.pi / 2 + theta
                     )
-                    km = find_nearest(
+                    km = closest_index(
                         self.coordinates.get_axis_array("theta"), np.pi / 2 - theta
                     )
                 ret_data = (
@@ -760,11 +757,11 @@ class GasField(Generic[F]):
                 ret_coords = self.coordinates.project_along(
                     Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-                km = find_nearest(zmed, zarr.min())
-                kp = find_nearest(zmed, zarr.max())
+                km = closest_index(zmed, zarr.min())
+                kp = closest_index(zmed, zarr.max())
                 if z is not None:
-                    km = find_nearest(zmed, -z)
-                    kp = find_nearest(zmed, z)
+                    km = closest_index(zmed, -z)
+                    kp = closest_index(zmed, z)
                 ret_data = (
                     np.nansum(
                         (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
@@ -778,11 +775,11 @@ class GasField(Generic[F]):
                 ret_coords = self.coordinates.project_along(
                     Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-                km = find_nearest(zmed, zarr.min())
-                kp = find_nearest(zmed, zarr.max())
+                km = closest_index(zmed, zarr.min())
+                kp = closest_index(zmed, zarr.max())
                 if z is not None:
-                    km = find_nearest(zmed, -z)
-                    kp = find_nearest(zmed, z)
+                    km = closest_index(zmed, -z)
+                    kp = closest_index(zmed, z)
                 ret_data = (
                     np.nansum(
                         (self.data * np.ediff1d(zarr))[:, :, km : kp + 1],
@@ -817,7 +814,6 @@ class GasField(Generic[F]):
         imid = self.find_imid()
         match self.native_geometry:
             case Geometry.CARTESIAN:
-                # find_around looks around the 2 coords values that surround coordmed at imid
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
                 ret_coords = self.coordinates.project_along(
                     Axis.CARTESIAN_Z, zmed[imid].item()
@@ -874,7 +870,7 @@ class GasField(Generic[F]):
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
                 R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
                 for i in range(self.shape[0]):
-                    iz0 = find_nearest(zmed, R[i] / np.tan(np.pi / 2 - theta))
+                    iz0 = closest_index(zmed, R[i] / np.tan(np.pi / 2 - theta))
                     if np.sign(theta) >= 0:
                         if iz0 < self.shape[2]:
                             data_at_theta[i, :] = self.data[i, :, iz0]
@@ -895,7 +891,7 @@ class GasField(Generic[F]):
                     Axis.COLATITUDE, thetamed[imid].item()
                 )
                 ret_data = self.data[
-                    :, find_nearest(thetamed, np.pi / 2 - theta), :
+                    :, closest_index(thetamed, np.pi / 2 - theta), :
                 ].reshape(self.shape[0], 1, self.shape[2])
             case _ as unreachable:
                 assert_never(unreachable)
@@ -924,7 +920,7 @@ class GasField(Generic[F]):
                 ret_coords = self.coordinates.project_along(
                     Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-                ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
+                ret_data = self.data[:, :, closest_index(zmed, z)].reshape(
                     self.shape[0], self.shape[1], 1
                 )
             case Geometry.POLAR:
@@ -932,7 +928,7 @@ class GasField(Generic[F]):
                 ret_coords = self.coordinates.project_along(
                     Axis.CARTESIAN_Z, zmed[imid].item()
                 )
-                ret_data = self.data[:, :, find_nearest(zmed, z)].reshape(
+                ret_data = self.data[:, :, closest_index(zmed, z)].reshape(
                     self.shape[0], self.shape[1], 1
                 )
             case Geometry.SPHERICAL:
@@ -1243,10 +1239,10 @@ class GasField(Generic[F]):
             raise ValueError("data has to be 2D or 3D in order to rotate the data.")
         if not _fequal(self.rotate_by, rotate_by):
             phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
-            ipi = find_nearest(phicoord, 0)
-            if abs(0 - phicoord[ipi]) > abs(np.ediff1d(find_around(phicoord, 0))[0]):
-                ipi = find_nearest(phicoord, 2 * np.pi)
-
+            if abs(closest_value(phicoord, 0)) > bracketing_values(phicoord, 0).span:
+                ipi = closest_index(phicoord, 2 * np.pi)
+            else:
+                ipi = closest_index(phicoord, 0)
             match self.native_geometry:
                 case Geometry.POLAR:
                     ret_data = np.roll(self.data, -ipi + 1, axis=1)
