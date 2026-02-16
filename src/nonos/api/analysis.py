@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any, Generic, Literal
+from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
@@ -340,6 +340,17 @@ class GasField(Generic[D, F]):
         i, j, k = (max(1, n - 1) for n in self.coordinates.shape)
         return i, j, k
 
+    @property
+    def effective_dim(self) -> Literal[1, 2, 3]:
+        """
+        The effective dimensionality of the underlying data.
+        This corresponds to the number of dimensions with more than a single element.
+        """
+        # 1 indicates a dimension that is effectively reduced
+        one_count = self.shape.count(1)
+        assert 1 <= one_count < 3
+        return cast(Literal[1, 2, 3], 3 - one_count)
+
     def map(
         self,
         a: str,
@@ -362,9 +373,7 @@ class GasField(Generic[D, F]):
         )
 
         data_key = self.name
-        # we count the number of 1 in the shape of the data, which gives the real dimension of the data,
-        # i.e. the number of reductions already performed (0 -> 3D, 1 -> 2D, 2 -> 1D)
-        if self.shape.count(1) not in (1, 2):
+        if self.effective_dim > 2:
             raise ValueError("data has to be 1D or 2D in order to call map.")
 
         axis_1 = Axis.from_label(a)
