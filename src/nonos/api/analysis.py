@@ -356,7 +356,7 @@ class GasField(Generic[F]):
         The effective dimensionality of the underlying data.
         This corresponds to the number of dimensions with more than a single element.
 
-        added_in: nonos 0.20.0
+        .. versionadded: 0.20.0
         """
         one_count = sum(self._reduced_dimensions)
         assert 0 <= one_count < 3
@@ -382,7 +382,7 @@ class GasField(Generic[F]):
         TypeError: if the effective number of dimensions of the data is greater than ndim
         ValueError: if ndim is anything other than 1, 2 or 3
 
-        added_in: nonos 0.20.0
+        .. versionadded: 0.20.0
         """
         if (eff_ndim := self.effective_ndim) > ndim:
             raise TypeError(f"Effective ndim {eff_ndim} is greater than target {ndim}")
@@ -409,7 +409,7 @@ class GasField(Generic[F]):
         """
         Shorthand for as_ndview(ndim=1)
 
-        added_in: nonos 0.20.0
+        .. versionadded: 0.20.0
         """
         return self.as_ndview(ndim=1)
 
@@ -417,7 +417,7 @@ class GasField(Generic[F]):
         """
         Shorthand for as_ndview(ndim=2)
 
-        added_in: nonos 0.20.0
+        .. versionadded: 0.20.0
         """
         return self.as_ndview(ndim=2)
 
@@ -425,7 +425,7 @@ class GasField(Generic[F]):
         """
         Shorthand for as_ndview(ndim=3)
 
-        added_in: nonos 0.20.0
+        .. versionadded: 0.20.0
         """
         return self.as_ndview(ndim=3)
 
