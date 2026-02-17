@@ -71,7 +71,7 @@ def test_compute_from_data(test_data_dir):
             field="RHOVX2",
             data=rhovp * vx2vp,
             coords=rhovpfield.coords,
-            on=rhovpfield.on,
+            on=rhovpfield.output_number,
             operation=rhovpfield.operation,
             directory=directory,
         )
