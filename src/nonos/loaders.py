@@ -259,7 +259,7 @@ def loader_from(
     code: str | None = None,
     parameter_file: os.PathLike[str] | None = None,
     directory: os.PathLike[str] | None = None,
-) -> "Loader[Any]":
+) -> "Loader[Any]":  # pragma: no cover
     # backward compat for nonos-cli 0.1.0
     return Loader.resolve(code=code, parameter_file=parameter_file, directory=directory)
 

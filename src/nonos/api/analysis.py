@@ -288,7 +288,7 @@ class GasField(Generic[F]):
         "and may be removed in a future version. "
         "Use GasField.name instead"
     )
-    def field(self) -> str:
+    def field(self) -> str:  # pragma: no cover
         return self.name
 
     @property
@@ -297,7 +297,7 @@ class GasField(Generic[F]):
         "and may be removed in a future version. "
         "Use GasField.loader.parameter_file instead"
     )
-    def inifile(self) -> Path:
+    def inifile(self) -> Path:  # pragma: no cover
         return self.loader.parameter_file
 
     @property
@@ -315,7 +315,7 @@ class GasField(Generic[F]):
         "and may be removed in a future version. "
         "Use GasField.output_number instead"
     )
-    def on(self) -> int:
+    def on(self) -> int:  # pragma: no cover
         return self.output_number
 
     @property
@@ -324,7 +324,7 @@ class GasField(Generic[F]):
         "and may be removed in a future version. "
         "Use GasField.loader.parameter_file.parent instead"
     )
-    def directory(self) -> Path:
+    def directory(self) -> Path:  # pragma: no cover
         return self.loader.parameter_file.parent
 
     def replace(self, **substitutions: Unpack[GasFieldAttrs[F]]) -> "GasField[F]":
