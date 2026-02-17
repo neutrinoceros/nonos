@@ -1266,7 +1266,7 @@ requires-dist = [
     { name = "cmyt", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "inifix", specifier = ">=5.1.0" },
     { name = "lick", marker = "extra == 'all'", specifier = ">=0.6.0" },
-    { name = "matplotlib", specifier = ">=3.5.0" },
+    { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "nonos", extras = ["cli"], marker = "extra == 'all'" },
     { name = "nonos-cli", marker = "extra == 'cli'", editable = "cli" },
     { name = "numpy", specifier = ">=1.21.2" },
