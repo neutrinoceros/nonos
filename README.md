@@ -52,9 +52,9 @@ python -m pip install "nonos[all]"
 
 We'll start by defining a `GasDataSet` object
 ```py
-import nonos
+from nonos.api import GasDataSet
 
-ds = nonos.GasDataSet(
+ds = GasDataSet(
     43,
     geometry="polar",
     directory="tests/data/idefix_planet3d",
