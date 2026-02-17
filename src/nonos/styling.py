@@ -1,4 +1,11 @@
+import sys
+
 import matplotlib as mpl
+
+if sys.version_info >= (3, 13):
+    from warnings import deprecated
+else:
+    from typing_extensions import deprecated
 
 
 def scale_mpl(scaling: float) -> None:
@@ -46,6 +53,12 @@ def scale_mpl(scaling: float) -> None:
     mpl.rcParams.update(context_dict)
 
 
+@deprecated(
+    "nonos.styling.set_mpl_style is deprecated since v0.20.0 "
+    "and may be removed in a future version. "
+    "Use matplolib.style.use('nonos.default') + nonos.styling.scale_mpl(<scaling>) "
+    "directly instead"
+)
 def set_mpl_style(scaling: float) -> None:
     import matplotlib.style
 
