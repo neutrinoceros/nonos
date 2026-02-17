@@ -25,7 +25,7 @@ def userval_or_default(userval: T1, /, *, default: T2) -> T1 | T2:
         return default
 
 
-def parse_output_number_range(
+def parse_snapshot_number_range(
     on: list[int] | int | Literal["unset"] | None,
     maxval: int | None = None,
 ) -> list[int]:

@@ -43,15 +43,15 @@ class VTKReader:
     NATIVE_COORDINATE_REGEXP = re.compile(r"X(1|2|3)(L|C)_NATIVE_COORDINATES")
 
     @staticmethod
-    def parse_output_number_and_filename(
+    def parse_snapshot_number_and_filename(
         file_or_number: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
         prefix: str,  # noqa: ARG004
     ) -> tuple[int, Path]:
         if isinstance(file_or_number, int):
-            output_number = int(file_or_number)
-            file = Path(f"data.{output_number:04d}.vtk")
+            snapshot_number = int(file_or_number)
+            file = Path(f"data.{snapshot_number:04d}.vtk")
         else:
             file = Path(file_or_number)
             if (m := re.search(r"\d+", file.name)) is None:
@@ -59,12 +59,12 @@ class VTKReader:
                     f"Failed to parse output number from filename {file.name}"
                 )
             else:
-                output_number = int(m.group())
+                snapshot_number = int(m.group())
 
         if file == Path(file.name):
             file = Path(directory) / file
 
-        return output_number, file
+        return snapshot_number, file
 
     @staticmethod
     def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
@@ -447,7 +447,7 @@ class VTKReader:
 @final
 class FargoReaderHelper:
     @staticmethod
-    def parse_output_number_and_filename(
+    def parse_snapshot_number_and_filename(
         file_or_number: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
@@ -455,21 +455,21 @@ class FargoReaderHelper:
     ) -> tuple[int, Path]:
         directory = Path(directory).resolve()
         if isinstance(file_or_number, int):
-            output_number = file_or_number
-            file = directory / f"gasdens{output_number:04d}.dat"
+            snapshot_number = file_or_number
+            file = directory / f"gasdens{snapshot_number:04d}.dat"
         else:
             file = Path(file_or_number)
             if file == Path(file.name):
                 file = directory / file
             if len(matches := re.findall(r"\d+", file.name)) == 1:
-                output_number = int(matches[0])
+                snapshot_number = int(matches[0])
             elif len(matches) == 0:
                 raise RuntimeError(
                     rf"Failed to guess an output number from {file_or_number!r}"
                 )
             else:
                 raise RuntimeError(rf"Ambiguous output number from {file_or_number!r}")
-        return output_number, file
+        return snapshot_number, file
 
     @staticmethod
     def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
@@ -481,29 +481,29 @@ class FargoReaderHelper:
         ]
 
     @staticmethod
-    def _get_output_number_and_dir_from(
+    def _get_snapshot_number_and_dir_from(
         file: str | os.PathLike[str],
     ) -> tuple[int, Path]:
         _in_file = Path(file).resolve()
         directory = _in_file.parent
         if (match := re.search(r"(?P<on>\d+).dat$", _in_file.name)) is not None:
-            output_number = int(match.group("on"))
+            snapshot_number = int(match.group("on"))
         else:
             raise ValueError(f"Failed to parse filename {file!r}")
 
-        return output_number, directory
+        return snapshot_number, directory
 
 
 @final
 class Fargo3DReader:
     @staticmethod
-    def parse_output_number_and_filename(
+    def parse_snapshot_number_and_filename(
         file_or_number: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]:
-        return FargoReaderHelper.parse_output_number_and_filename(
+        return FargoReaderHelper.parse_snapshot_number_and_filename(
             file_or_number, directory=directory, prefix=prefix
         )
 
@@ -517,8 +517,8 @@ class Fargo3DReader:
         /,
         **meta: Any,
     ) -> BinData[f64]:
-        output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
-            file
+        snapshot_number, directory = (
+            FargoReaderHelper._get_snapshot_number_and_dir_from(file)
         )
 
         default_fluid = "gas"
@@ -582,14 +582,14 @@ class Fargo3DReader:
             )
 
         for key, field in pairs:
-            file = directory / f"{fluid}{field}{output_number}.dat"
+            file = directory / f"{fluid}{field}{snapshot_number}.dat"
             if not file.is_file():
                 continue
             V.data[key] = _read_array(file)
 
         if not V.data:
             raise FileNotFoundError(
-                f"No file matches the pattern '{fluid}*{output_number}.dat'"
+                f"No file matches the pattern '{fluid}*{snapshot_number}.dat'"
             )
 
         return V.finalize()
@@ -598,13 +598,13 @@ class Fargo3DReader:
 @final
 class FargoADSGReader:
     @staticmethod
-    def parse_output_number_and_filename(
+    def parse_snapshot_number_and_filename(
         file_or_number: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
         prefix: str,
     ) -> tuple[int, Path]:
-        return FargoReaderHelper.parse_output_number_and_filename(
+        return FargoReaderHelper.parse_snapshot_number_and_filename(
             file_or_number, directory=directory, prefix=prefix
         )
 
@@ -618,8 +618,8 @@ class FargoADSGReader:
         /,
         **meta: Any,  # noqa: ARG004
     ) -> BinData[f64]:
-        output_number, directory = FargoReaderHelper._get_output_number_and_dir_from(
-            file
+        snapshot_number, directory = (
+            FargoReaderHelper._get_snapshot_number_and_dir_from(file)
         )
 
         V = BinData.default_init(dtype=np.dtype("float64"))
@@ -654,7 +654,7 @@ class FargoADSGReader:
             )
 
         for key, field in [("RHO", "dens"), ("VX1", "vrad"), ("VX2", "vtheta")]:
-            file = directory / f"gas{field}{output_number}.dat"
+            file = directory / f"gas{field}{snapshot_number}.dat"
             if not file.is_file():
                 continue
             V.data[key] = _read_array(file)
@@ -666,12 +666,12 @@ class NPYReader:
     _filename_re = re.compile(
         r"^_?(?P<prefix>[\w\.]*)"
         r"_(?P<field_name>[A-Z\d]+)"
-        r"\.(?P<output_number>\d+)"
+        r"\.(?P<snapshot_number>\d+)"
         r"\.npy$"
     )
 
     @staticmethod
-    def parse_output_number_and_filename(
+    def parse_snapshot_number_and_filename(
         file_or_number: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
@@ -679,15 +679,15 @@ class NPYReader:
     ) -> tuple[int, Path]:
         directory = Path(directory).resolve()
         if isinstance(file_or_number, int):
-            output_number = file_or_number
+            snapshot_number = file_or_number
             all_bin_files = NPYReader.get_bin_files(directory / "any")
-            _filter_re = re.compile(rf"^_?{prefix}_[A-Z\d]+.{output_number:04d}.npy")
+            _filter_re = re.compile(rf"^_?{prefix}_[A-Z\d]+.{snapshot_number:04d}.npy")
             matches = [
                 file for file in all_bin_files if _filter_re.fullmatch(file.name)
             ]
             if not matches:
                 raise FileNotFoundError(
-                    f"Failed to locate a file matching {prefix=!r} and {output_number=}"
+                    f"Failed to locate a file matching {prefix=!r} and {snapshot_number=}"
                 )
             file = matches[0]
             file_alt = (
@@ -699,7 +699,7 @@ class NPYReader:
                 raise ValueError(f"Filename {file.name!r} is not recognized")
             if file == Path(file.name):
                 file = directory / match.group("field_name").lower() / file
-            output_number = int(match.group("output_number"))
+            snapshot_number = int(match.group("snapshot_number"))
             file_alt = None
 
         if not file.is_file():
@@ -711,7 +711,7 @@ class NPYReader:
             # backward compatibility
             file = file_alt
 
-        return output_number, file
+        return snapshot_number, file
 
     @staticmethod
     def get_bin_files(directory: os.PathLike[str], /) -> list[Path]:
@@ -742,7 +742,7 @@ class NPYReader:
             raise ValueError(f"Filename {ref_file.name!r} is not recognized")
 
         prefix = match.group("prefix")
-        output_number = int(match.group("output_number"))
+        snapshot_number = int(match.group("snapshot_number"))
 
         op_suffix = f"_{prefix}" if prefix else ""
         header = ref_file.parents[1] / "header" / f"header{op_suffix}.json"
@@ -765,7 +765,7 @@ class NPYReader:
                 raise AssertionError
             if match.group("prefix") != prefix:
                 continue
-            if int(match.group("output_number")) != output_number:
+            if int(match.group("snapshot_number")) != snapshot_number:
                 continue
             fields_found[match.group("field_name")] = file
 
