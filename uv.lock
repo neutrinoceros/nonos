@@ -1270,7 +1270,7 @@ requires-dist = [
     { name = "nonos", extras = ["cli"], marker = "extra == 'all'" },
     { name = "nonos-cli", marker = "extra == 'cli'", editable = "cli" },
     { name = "numpy", specifier = ">=1.21.2" },
-    { name = "packaging", specifier = ">=20.0" },
+    { name = "packaging", specifier = ">=22.0" },
     { name = "scipy", marker = "extra == 'all'", specifier = ">=1.7.2" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.5.0" },
 ]
