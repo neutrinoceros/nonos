@@ -32,8 +32,8 @@ dependencies = [
     "inifix>=5.1.0",
     "matplotlib>=3.5.0",
     "numpy>=1.21.2",
-    "packaging>=20.0",
-    "typing-extensions >= 4.5.0 ; python_version < '3.13'",
+    "packaging>=22.0",
+    "typing-extensions>=4.5.0 ; python_version < '3.13'",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +64,7 @@ test = [
 ]
 covcheck = [
     {include-group = "test"},
-    "coverage[toml]; python_full_version < '3.11'",
+    "coverage[toml] ; python_full_version < '3.11'",
     "coverage>=7.10.0",
     "numexpr>=2.10.2",
 ]
