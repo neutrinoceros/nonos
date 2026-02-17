@@ -96,7 +96,7 @@ fig, ax = plt.subplots()
     .latitudinal_projection(theta=3 * 0.05)
     .azimuthal_average()
     .map("R")
-    .plot(fig, ax, c="black", title=r"$\Sigma$")
+    .plot(fig, ax, color="black", title=r"$\Sigma$")
 )
 ```
 
