@@ -23,7 +23,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import D1, D2, D, F, FArray, FArray1D, FArray3D, PlanetData
+from nonos._types import D1, D2, D, F, FArray, FArray1D, FArray2D, FArray3D, PlanetData
 from nonos.api._angle_parsing import (
     _fequal,
     _resolve_planet_file,
@@ -336,24 +336,98 @@ class GasField(Generic[F]):
         return replace(self, **substitutions)
 
     @property
+    def dtype(self) -> np.dtype[F]:
+        return self.loader.components.dtype
+
+    @property
     def shape(self) -> tuple[int, int, int]:
         i, j, k = (max(1, n - 1) for n in self.coordinates.shape)
         return i, j, k
 
     @property
-    def effective_dim(self) -> Literal[1, 2, 3]:
+    def _reduced_dimensions(self) -> tuple[bool, bool, bool]:
+        # 1 indicates a dimension that is effectively reduced
+        s = self.shape
+        return s[0] == 1, s[1] == 1, s[2] == 1
+
+    @property
+    def effective_ndim(self) -> Literal[1, 2, 3]:
         """
         The effective dimensionality of the underlying data.
         This corresponds to the number of dimensions with more than a single element.
+
+        added_in: nonos 0.20.0
         """
-        # 1 indicates a dimension that is effectively reduced
-        one_count = self.shape.count(1)
-        assert 1 <= one_count < 3
+        one_count = sum(self._reduced_dimensions)
+        assert 0 <= one_count < 3
         return cast(Literal[1, 2, 3], 3 - one_count)
 
-    @property
-    def dtype(self) -> np.dtype[F]:
-        return self.loader.components.dtype
+    @overload
+    def as_ndview(self, *, ndim: Literal[1]) -> FArray1D[F]: ...
+    @overload
+    def as_ndview(self, *, ndim: Literal[2]) -> FArray2D[F]: ...
+    @overload
+    def as_ndview(self, *, ndim: Literal[3]) -> FArray3D[F]: ...
+    def as_ndview(self, *, ndim):  # type: ignore[no-untyped-def]
+        """
+        Create a read-only view of the underlying data array with a specific number of dimensions.
+
+        Parameters
+        ----------
+        ndim: 1, 2, or 3 (keyword-only)
+          The desired number of dimensions of the result
+
+        Raises
+        ------
+        TypeError: if the effective number of dimensions of the data is greater than ndim
+        ValueError: if ndim is anything other than 1, 2 or 3
+
+        added_in: nonos 0.20.0
+        """
+        if (eff_ndim := self.effective_ndim) > ndim:
+            raise TypeError(f"Effective ndim {eff_ndim} is greater than target {ndim}")
+        if eff_ndim != ndim == 2:
+            # not clear how this *should* work: we'd be left with one dangling dimension
+            # whose position could be ambiguous. Better to error out if this isn't needed.
+            assert eff_ndim == 1
+            raise TypeError("Cannot produce a 2d view from effective ndim 1")
+
+        match ndim:
+            case 3:
+                arr = self.data.view()
+            case 1 | 2:
+                arr = self.data.squeeze()
+            case _:
+                raise ValueError(f"Expected ndim to be either 1, 2 or 3. Got {ndim=}")
+
+        if arr.ndim != ndim:
+            raise AssertionError
+
+        return arr
+
+    def as_1dview(self) -> FArray1D[F]:
+        """
+        Shorthand for as_ndview(ndim=1)
+
+        added_in: nonos 0.20.0
+        """
+        return self.as_ndview(ndim=1)
+
+    def as_2dview(self) -> FArray2D[F]:
+        """
+        Shorthand for as_ndview(ndim=2)
+
+        added_in: nonos 0.20.0
+        """
+        return self.as_ndview(ndim=2)
+
+    def as_3dview(self) -> FArray3D[F]:
+        """
+        Shorthand for as_ndview(ndim=3)
+
+        added_in: nonos 0.20.0
+        """
+        return self.as_ndview(ndim=3)
 
     @overload
     def map(
@@ -397,7 +471,7 @@ class GasField(Generic[F]):
         )
 
         data_key = self.name
-        if self.effective_dim > 2:
+        if self.effective_ndim > 2:
             raise ValueError("data has to be 1D or 2D in order to call map.")
 
         axis_1 = Axis.from_label(a)
