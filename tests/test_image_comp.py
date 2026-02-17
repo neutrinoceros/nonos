@@ -3,6 +3,7 @@ from importlib.util import find_spec
 
 import inifix
 import matplotlib as mpl
+import matplotlib.style
 import numpy as np
 import pytest
 from matplotlib.colors import SymLogNorm
@@ -27,7 +28,8 @@ def tmp_mpl_state():
 @pytest.mark.parametrize("scaling", [0.5, 1.0, 2.0])
 @pytest.mark.mpl_image_compare(style="default")
 def test_set_mpl_style(scaling):
-    set_mpl_style(scaling)
+    with pytest.deprecated_call():
+        set_mpl_style(scaling)
 
     fig = Figure()
     ax = fig.add_subplot()
