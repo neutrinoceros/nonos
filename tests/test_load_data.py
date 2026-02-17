@@ -178,7 +178,7 @@ def test_api_vtk_by_name(test_data_dir, from_abs_path):
         input_ = "data.0500.vtk"
 
     ds = GasDataSet(input_)
-    assert ds.output_number == 500
+    assert ds.snapshot_number == 500
 
     with pytest.raises(FileNotFoundError):
         GasDataSet(input_.replace("data.0500", "datawrong.0500"))

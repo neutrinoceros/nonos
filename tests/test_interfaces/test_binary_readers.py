@@ -133,7 +133,7 @@ class TestNPYReader:
             assert results == expected_files
 
     @pytest.mark.parametrize(
-        "file_or_number, prefix, expected_output_number, expected_filename",
+        "file_or_number, prefix, expected_snapshot_number, expected_filename",
         [
             (
                 "azimuthal_average_RHO.0001.npy",
@@ -146,31 +146,31 @@ class TestNPYReader:
             (456, "", 456, ("foo", "__FOO.0456.npy")),
         ],
     )
-    def test_parse_output_number_and_filename(
+    def test_parse_snapshot_number_and_filename(
         self,
         initdir,
         file_or_number,
         prefix,
-        expected_output_number,
+        expected_snapshot_number,
         expected_filename,
     ):
         tmp_path, _files = initdir
         directory = tmp_path.resolve()
 
-        output_number, filename = NPYReader.parse_output_number_and_filename(
+        snapshot_number, filename = NPYReader.parse_snapshot_number_and_filename(
             file_or_number,
             directory=directory,
             prefix=prefix,
         )
-        assert output_number == expected_output_number
+        assert snapshot_number == expected_snapshot_number
         assert filename == directory.joinpath(*expected_filename)
 
-    def test_parse_output_number_and_filename_invalid_file(self, initdir):
+    def test_parse_snapshot_number_and_filename_invalid_file(self, initdir):
         tmp_path, _files = initdir
         directory = tmp_path.resolve()
 
         with pytest.raises(ValueError, match="Filename 'invalid' is not recognized"):
-            NPYReader.parse_output_number_and_filename(
+            NPYReader.parse_snapshot_number_and_filename(
                 "invalid",
                 directory=directory,
                 prefix="azimuthal_average",

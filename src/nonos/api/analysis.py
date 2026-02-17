@@ -194,23 +194,23 @@ class Plotable(Generic[D, F]):
         return artist
 
 
-def _get_ind_output_number(
-    loader: Loader[F], output_number: int, time: FArray1D[F]
+def _get_ind_snapshot_number(
+    loader: Loader[F], snapshot_number: int, time: FArray1D[F]
 ) -> int:
     ini = loader.load_ini_file()
-    target_time = ini.output_time_interval * output_number
+    target_time = ini.output_time_interval * snapshot_number
     return closest_index(time, target_time)
 
 
 def _find_planet_azimuth(
     loader: Loader[F],
-    output_number: int,
+    snapshot_number: int,
     *,
     planet_file: str,
 ) -> float:
     data_dir = loader.parameter_file.parent
     pd = loader.load_planet_data(data_dir / planet_file)
-    ind_on = _get_ind_output_number(loader, output_number, pd.t)
+    ind_on = _get_ind_snapshot_number(loader, snapshot_number, pd.t)
     return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
 
@@ -219,7 +219,7 @@ class GasFieldAttrs(Generic[F], TypedDict, total=False):
     data: FArray3D[F]
     coordinates: Coordinates[F]
     native_geometry: Geometry
-    output_number: int
+    snapshot_number: int
     loader: Loader[F]
     operation: str
     rotate_by: float
@@ -231,7 +231,7 @@ class GasField(Generic[F]):
     data: FArray3D[F]
     coordinates: Coordinates[F]
     native_geometry: Geometry
-    output_number: int
+    snapshot_number: int
     loader: Loader[F]
     operation: str = ""
     rotate_by: float = 0.0
@@ -266,7 +266,7 @@ class GasField(Generic[F]):
             data=data,
             coordinates=coords,
             native_geometry=Geometry(ngeom),
-            output_number=on,
+            snapshot_number=on,
             operation=operation,
             loader=loader,
             rotate_by=_resolve_rotate_by(
@@ -277,7 +277,7 @@ class GasField(Generic[F]):
                 planet_azimuth_finder=partial(
                     _find_planet_azimuth,
                     loader=loader,
-                    output_number=on,
+                    snapshot_number=on,
                 ),
             ),
         )
@@ -313,10 +313,10 @@ class GasField(Generic[F]):
     @deprecated(
         "GasField.on is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.output_number instead"
+        "Use GasField.snapshot_number instead"
     )
     def on(self) -> int:  # pragma: no cover
-        return self.output_number
+        return self.snapshot_number
 
     @property
     @deprecated(
@@ -466,7 +466,7 @@ class GasField(Generic[F]):
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
                 loader=self.loader,
-                output_number=self.output_number,
+                snapshot_number=self.snapshot_number,
             ),
         )
 
@@ -577,7 +577,7 @@ class GasField(Generic[F]):
         operation = self.operation
         headerdir = directory / "header"
         subdir = directory / self.name.lower()
-        file = subdir / f"{operation}_{self.name}.{self.output_number:04d}.npy"
+        file = subdir / f"{operation}_{self.name}.{self.snapshot_number:04d}.npy"
         if not header_only:
             if not file.is_file():
                 subdir.mkdir(exist_ok=True, parents=True)
@@ -660,8 +660,8 @@ class GasField(Generic[F]):
         file = self.loader.parameter_file.parent / planet_file
         return self.loader.load_planet_data(file)
 
-    def _get_ind_output_number(self, time: FArray1D[F]) -> int:
-        return _get_ind_output_number(self.loader, self.output_number, time)
+    def _get_ind_snapshot_number(self, time: FArray1D[F]) -> int:
+        return _get_ind_snapshot_number(self.loader, self.snapshot_number, time)
 
     def find_rp(
         self,
@@ -670,7 +670,7 @@ class GasField(Generic[F]):
         planet_file: str | None = None,
     ) -> float:
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
-        ind_on = self._get_ind_output_number(pd.t)
+        ind_on = self._get_ind_snapshot_number(pd.t)
         return float(pd.d[ind_on])  # type: ignore [attr-defined]
 
     def find_rhill(
@@ -682,7 +682,7 @@ class GasField(Generic[F]):
         ini = self.loader.load_ini_file()
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         oe = pd.get_orbital_elements(ini.frame)
-        ind_on = self._get_ind_output_number(pd.t)
+        ind_on = self._get_ind_snapshot_number(pd.t)
         return float(pd.q[ind_on] / 3.0 ** (1 / 3) * oe.a[ind_on])
 
     def find_phip(
@@ -693,7 +693,7 @@ class GasField(Generic[F]):
     ) -> float:
         return _find_planet_azimuth(
             self.loader,
-            self.output_number,
+            self.snapshot_number,
             planet_file=_resolve_planet_file(
                 planet_file=planet_file,
                 planet_number=planet_number,
@@ -1303,7 +1303,7 @@ class GasField(Generic[F]):
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
                 loader=self.loader,
-                output_number=self.output_number,
+                snapshot_number=self.snapshot_number,
             ),
             stacklevel=2,
         )
@@ -1412,8 +1412,8 @@ class GasDataSet(Generic[D, F]):
         else:
             self._loader = loader
 
-        self.output_number, datafile = (
-            self._loader.components.binary_reader.parse_output_number_and_filename(
+        self.snapshot_number, datafile = (
+            self._loader.components.binary_reader.parse_snapshot_number_and_filename(
                 input_dataset,
                 directory=directory,
                 prefix=operation or "",
@@ -1441,7 +1441,7 @@ class GasDataSet(Generic[D, F]):
                 array,
                 self.coordinates,
                 self.native_geometry,
-                self.output_number,
+                self.snapshot_number,
                 operation="",
                 inifile=self._loader.parameter_file,
                 code=code,
@@ -1463,10 +1463,10 @@ class GasDataSet(Generic[D, F]):
     @deprecated(
         "GasDataSet.on is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasDataSet.output_number instead"
+        "Use GasDataSet.snapshot_number instead"
     )
     def on(self) -> int:
-        return self.output_number
+        return self.snapshot_number
 
     @property
     @deprecated(

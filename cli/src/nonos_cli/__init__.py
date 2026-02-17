@@ -34,8 +34,8 @@ from nonos_cli.logging import configure_logger, logger, parse_verbose_level
 from nonos_cli.parsing import (
     is_set,
     parse_image_format,
-    parse_output_number_range,
     parse_range,
+    parse_snapshot_number_range,
     range_converter,
     userval_or_default,
 )
@@ -525,7 +525,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         try:
             requested = set(
-                parse_output_number_range(args["on"], maxval=max(available))
+                parse_snapshot_number_range(args["on"], maxval=max(available))
             )
         except ValueError as exc:
             logger.error("{}", exc)
