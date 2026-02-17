@@ -20,13 +20,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import inifix
+import matplotlib as mpl
+import matplotlib.style
 import numpy as np
 from tqdm import tqdm
 
 from nonos.api import GasDataSet
 from nonos.api._angle_parsing import _resolve_planet_file
 from nonos.loaders import Loader
-from nonos.styling import set_mpl_style
+from nonos.styling import scale_mpl
 from nonos_cli.config import DEFAULTS
 from nonos_cli.logging import configure_logger, logger, parse_verbose_level
 from nonos_cli.parsing import (
@@ -110,7 +112,9 @@ def process_field(
     log_level,
 ):
     configure_logger(level=log_level)
-    set_mpl_style(scaling=scaling)
+    mpl.style.use("nonos.default")
+    scale_mpl(scaling)
+
     if geometry == "unset":
         geometry = None
     ds = GasDataSet(on, geometry=geometry, directory=datadir)
