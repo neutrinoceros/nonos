@@ -15,9 +15,7 @@ constraints = [
     { name = "fonttools", specifier = ">=4.24.2" },
     { name = "jinja2", specifier = ">=2.10.2" },
     { name = "pyparsing", specifier = ">=2.4.0" },
-    { name = "setuptools", specifier = ">=61.0.0" },
 ]
-build-constraints = [{ name = "setuptools", specifier = ">=61.0.0" }]
 
 [[package]]
 name = "babel"
@@ -1266,7 +1264,7 @@ requires-dist = [
     { name = "cmyt", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "inifix", specifier = ">=5.1.0" },
     { name = "lick", marker = "extra == 'all'", specifier = ">=0.6.0" },
-    { name = "matplotlib", specifier = ">=3.5.0" },
+    { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "nonos", extras = ["cli"], marker = "extra == 'all'" },
     { name = "nonos-cli", marker = "extra == 'cli'", editable = "cli" },
     { name = "numpy", specifier = ">=1.21.2" },

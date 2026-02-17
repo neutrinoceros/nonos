@@ -30,7 +30,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "inifix>=5.1.0",
-    "matplotlib>=3.5.0",
+    "matplotlib>=3.7.0",
     "numpy>=1.21.2",
     "packaging>=22.0",
     "typing-extensions>=4.5.0 ; python_version < '3.13'",
@@ -176,17 +176,10 @@ no-build-package = [
 constraint-dependencies = [
     # https://github.com/matplotlib/pytest-mpl/pull/252
     "jinja2>=2.10.2",
-    # via matplotlib 3.5
-    "setuptools>=61.0.0",
+    # via matplotlib 3.7
     "pyparsing>=2.4.0",
     "fonttools>=4.24.2",
 ]
-
-build-constraint-dependencies = [
-    # via matplotlib 3.5
-    "setuptools>=61.0.0",
-]
-
 
 [tool.uv.workspace]
 members = [

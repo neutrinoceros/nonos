@@ -1,7 +1,3 @@
-import importlib.resources as importlib_resources
-from pathlib import Path
-from typing import cast
-
 import matplotlib as mpl
 
 
@@ -51,13 +47,7 @@ def scale_mpl(scaling: float) -> None:
 
 
 def set_mpl_style(scaling: float) -> None:
-    if mpl.__version_info__ >= (3, 7):
-        import matplotlib.style
+    import matplotlib.style
 
-        matplotlib.style.use("nonos.default")
-    else:
-        # promise mypy this is a Path to get around a broad return type
-        # from importlib_resource.files
-        nonos_path = cast(Path, importlib_resources.files("nonos"))
-        mpl.rc_file(nonos_path / "default.mplstyle")
+    matplotlib.style.use("nonos.default")
     scale_mpl(scaling)
