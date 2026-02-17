@@ -1287,7 +1287,7 @@ class GasField(Generic[F]):
                 "For now, diff should only be applied on the initial Field cube."
             )
         ret_data = (self.data - ds_2[self.name].data) / ds_2[self.name].data
-        return self.replace(data=ret_data.astype("float32", copy=False))
+        return self.replace(data=ret_data.astype(self.dtype, copy=False))
 
     def rotate(
         self,
