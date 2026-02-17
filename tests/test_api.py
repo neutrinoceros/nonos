@@ -4,6 +4,7 @@ from math import prod
 import numpy as np
 import numpy.testing as npt
 import pytest
+from pytest import RaisesExc, RaisesGroup
 
 from nonos._geometry import Coordinates, Geometry
 from nonos.api import GasDataSet, GasField, file_analysis
@@ -37,6 +38,36 @@ def test_gasfield_immutable_data(stub_field):
     assert field.data is not arr
     with pytest.raises(ValueError, match=r"read-only$"):
         field.data.flat[0] = np.nan
+
+
+@pytest.mark.parametrize(
+    "newtype, ctx",
+    [
+        pytest.param(
+            "f4",
+            RaisesExc(TypeError, match=r"^dtype itemsize mismatch \(4 != 8\)$"),
+            id="itemsize",
+        ),
+        pytest.param(
+            "i8",
+            RaisesExc(TypeError, match=r"^dtype kind mismatch \(i != f\)$"),
+            id="kind",
+        ),
+        pytest.param(
+            "i4",
+            RaisesGroup(
+                RaisesExc(TypeError, match=r"^dtype itemsize mismatch \(4 != 8\)$"),
+                RaisesExc(TypeError, match=r"^dtype kind mismatch \(i != f\)$"),
+                match="multiple issues with input dtypes",
+            ),
+            id="all",
+        ),
+    ],
+)
+def test_gasfield_mismatch_dtypes_size(stub_field, newtype, ctx):
+    arr = stub_field.as_3dview().astype(newtype)
+    with ctx:
+        stub_field.replace(data=arr)
 
 
 @pytest.mark.parametrize(

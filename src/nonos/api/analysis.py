@@ -9,7 +9,14 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import TYPE_CHECKING, Any, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    cast,
+    overload,
+)
 
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
@@ -21,6 +28,11 @@ from nonos._geometry import (
     Coordinates,
     Geometry,
     axes_from_geometry,
+)
+from nonos._integrity_checks import (
+    collect_dtype_exceptions,
+    collect_shape_exceptions,
+    compile_exceptions,
 )
 from nonos._readers.binary import NPYReader
 from nonos._types import D1, D2, D, F, FArray, FArray1D, FArray2D, FArray3D, PlanetData
@@ -239,6 +251,25 @@ class GasField(Generic[F]):
     def __post_init__(self) -> None:
         object.__setattr__(self, "data", self.data.view())
         self.data.flags.writeable = False
+
+        if excs := compile_exceptions(
+            "multiple issues with inputs",
+            (
+                "multiple issues with input shapes",
+                collect_shape_exceptions(
+                    self.shape,
+                    self.coordinates.shape,
+                ),
+            ),
+            (
+                "multiple issues with input dtypes",
+                collect_dtype_exceptions(
+                    self.data.dtype,
+                    self.coordinates.dtype,
+                ),
+            ),
+        ):
+            raise excs
 
     @classmethod
     def _legacy_init(
