@@ -89,18 +89,21 @@ Optional arguments:
     ```python
     import matplotlib.pyplot as plt
     from nonos.api import GasDataSet
+
     ds = GasDataSet(43, geometry="polar", directory="tests/data/idefix_planet3d")
     ```
 
     If now, with the same dataset, we perform a latitudinal projection of the field `RHO`, i.e. the integral of the density between $-\theta$ and $\theta$, and then an azimuthal average, before mapping it in the radial (`"R"`) direction:
+
     ```python
-    dslp = ds["RHO"].latitudinal_projection(theta=3*0.05).azimuthal_average().map("R")
+    dslp = ds["RHO"].latitudinal_projection(theta=3 * 0.05).azimuthal_average().map("R")
     ```
 
     Finally, we display the y-label by adding the argument `title`
+
     ```python
     fig, ax = plt.subplots()
-    dslp.plot(fig, ax, c="k", title=r"$\Sigma$")
+    dslp.plot(fig, ax, color="black", title=r"$\Sigma$")
     plt.show()
     ```
 
@@ -117,6 +120,7 @@ Optional arguments:
     ```python
     import matplotlib.pyplot as plt
     from nonos.api import GasDataSet
+
     ds = GasDataSet(23, directory="tests/data/idefix_newvtk_planet2d")
     fig, ax = plt.subplots()
     ds["VX1"].map("R", "phi").plot(fig, ax, cmap="RdBu_r", title=r"$v_{\rm R}$")
@@ -145,9 +149,9 @@ from nonos.api import GasDataSet, compute
 ds = GasDataSet(0)
 
 Vnorm = compute(
-  field="V",
-  data=np.sqrt(ds["VX1"].data**2 + ds["VX2"].data**2 + ds["VX3"].data**2),
-  ref=ds["VX1"],
+    field="V",
+    data=np.sqrt(ds["VX1"].data ** 2 + ds["VX2"].data ** 2 + ds["VX3"].data ** 2),
+    ref=ds["VX1"],
 )
 ```
 
@@ -226,6 +230,7 @@ It is possible to save reduced arrays in NPY files, which are standard binary fi
 
     ```python
     from nonos.api import GasDataSet
+
     ds = GasDataSet(500, directory="tests/data/idefix_spherical_planet3d")
     for field in ("RHO", "VX1"):
         ds[field].azimuthal_average().save("tests/data/idefix_spherical_planet3d")
@@ -235,7 +240,12 @@ It is possible to save reduced arrays in NPY files, which are standard binary fi
 
     ```python
     from nonos.api import GasDataSet
-    ds_aa = GasDataSet.from_npy(500, operation="azimuthal_average", directory="tests/data/idefix_spherical_planet3d")
+
+    ds_aa = GasDataSet.from_npy(
+        500,
+        operation="azimuthal_average",
+        directory="tests/data/idefix_spherical_planet3d",
+    )
     ```
 
 ## Plotting the fields
@@ -253,6 +263,7 @@ Optional arguments:
 * `cmap`: choice of colormap (default: `inferno`)
 * `title`: name of the field in the colorbar (default: `None`, i.e. no colorbar)
 * `filename`, `fmt` and `dpi`: in order to directly save the plot, corresponds respectively the name of the file, the extension (default: `png`) and the resolution (default: `500`) of the saved figure. It is equivalent to
+
 ```python
 plt.savefig(f"{filename}.{fmt}", bbox_inches="tight", dpi=dpi)
 ```
@@ -265,7 +276,7 @@ By default, the figure is not saved in case you want to personalize the final pl
     from nonos.api import GasDataSet
 
     ds = GasDataSet(23)
-    dsmap = ds["RHO"].radial_at_r(1).map("phi","z")
+    dsmap = ds["RHO"].radial_at_r(1).map("phi", "z")
     fig, ax = plt.subplots()
     dsmap.plot(
         fig,
