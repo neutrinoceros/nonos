@@ -1324,7 +1324,7 @@ all = [
 requires-dist = [
     { name = "inifix", specifier = ">=5.1.0" },
     { name = "loguru", specifier = ">=0.5.3" },
-    { name = "matplotlib", specifier = ">=3.5.0" },
+    { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "nonos", editable = "." },
     { name = "nonos", extras = ["all"], marker = "extra == 'all'", editable = "." },
     { name = "numpy", specifier = ">=1.21.2" },
