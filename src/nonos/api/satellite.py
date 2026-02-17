@@ -3,7 +3,7 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
 
 import numpy as np
 from packaging.version import Version
@@ -119,11 +119,6 @@ class NonosLick(Generic[F]):
         self.ymin = ymin
         self.ymax = ymax
 
-        if lx.effective_dim != 2 or ly.effective_dim != 2 or field.effective_dim != 2:
-            raise TypeError(
-                "Expected GasField inputs with effective dimensionality of exactly 2"
-            )
-
         # (x,y) are 2D meshgrids at cell centers
         self.X: FArray2D[F]
         self.Y: FArray2D[F]
@@ -134,9 +129,9 @@ class NonosLick(Generic[F]):
         self.X, self.Y, self.LINE1, self.LINE2, self.F, self.lick = lick_box(
             x,
             y,
-            cast(FArray2D[F], lx.data.squeeze()),
-            cast(FArray2D[F], ly.data.squeeze()),
-            cast(FArray2D[F], field.data.squeeze()),
+            lx.as_2dview(),
+            ly.as_2dview(),
+            field.as_2dview(),
             xmin=self.xmin,
             xmax=self.xmax,
             ymin=self.ymin,

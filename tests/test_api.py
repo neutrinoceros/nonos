@@ -1,4 +1,5 @@
 import os
+from math import prod
 
 import numpy as np
 import numpy.testing as npt
@@ -9,16 +10,16 @@ from nonos.api import GasDataSet, GasField, file_analysis
 from nonos.loaders import Loader
 
 
-def test_gasfield_immutable_data(test_data_dir):
-    arr = np.eye(8)
-    field = GasField(
+@pytest.fixture
+def stub_field(test_data_dir):
+    return GasField(
         name="test",
-        data=arr,
+        data=np.arange(30, dtype="float64").reshape(2, 3, 5),
         coordinates=Coordinates(
             geometry=Geometry.CARTESIAN,
-            x1=np.linspace(0, 1, 8),
-            x2=np.linspace(0, 1, 8),
-            x3=np.linspace(0, 1, 8),
+            x1=np.linspace(0, 1, 3),
+            x2=np.linspace(0, 1, 4),
+            x3=np.linspace(0, 1, 6),
         ),
         native_geometry=Geometry.CARTESIAN,
         output_number=0,
@@ -26,10 +27,82 @@ def test_gasfield_immutable_data(test_data_dir):
             directory=test_data_dir / "idefix_planet3d",
         ),
     )
+
+
+def test_gasfield_immutable_data(stub_field):
+    arr = np.arange(30, dtype="float64").reshape(2, 3, 5)
+    field = stub_field.replace(data=arr)
     npt.assert_array_equal(field.data, arr)
+
     assert field.data is not arr
     with pytest.raises(ValueError, match=r"read-only$"):
         field.data.flat[0] = np.nan
+
+
+@pytest.mark.parametrize(
+    "shape, effective_ndim",
+    [
+        ((2, 3, 5), 3),
+        ((1, 3, 5), 2),
+        ((2, 1, 5), 2),
+        ((2, 3, 1), 2),
+        ((1, 1, 5), 1),
+        ((1, 3, 1), 1),
+        ((2, 1, 1), 1),
+    ],
+)
+def test_gasfield_ndviews(stub_field, shape, effective_ndim, subtests):
+    size = prod(shape)
+    arr = np.arange(size, dtype="float64").reshape(shape)
+
+    field = stub_field.replace(
+        data=arr,
+        coordinates=Coordinates(
+            geometry=Geometry.CARTESIAN,
+            x1=np.linspace(0, 1, shape[0] + 1),
+            x2=np.linspace(0, 1, shape[1] + 1),
+            x3=np.linspace(0, 1, shape[2] + 1),
+        ),
+    )
+    allowed_dims = [d for d in (1, 2, 3) if d >= effective_ndim]
+    if effective_ndim == 1:
+        allowed_dims.remove(2)
+    for ndim in allowed_dims:
+        method_name = f"as_{ndim}dview"
+        assert hasattr(field, method_name)
+        with subtests.test(ndim=ndim):
+            v1 = field.as_ndview(ndim=ndim)
+            v2 = getattr(field, method_name)()
+            assert v1.ndim == ndim
+            npt.assert_array_equal(v1.squeeze(), arr.squeeze())
+            npt.assert_array_equal(v2, v1)
+            assert not v1.flags.writeable
+            assert not v2.flags.writeable
+
+    forbidden_dims = sorted({1, 2, 3}.difference(allowed_dims))
+    for ndim in forbidden_dims:
+        method_name = f"as_{ndim}dview"
+        assert hasattr(field, method_name)
+        if effective_ndim == 1 and ndim == 2:
+            msg = r"^Cannot produce a 2d view from effective ndim 1$"
+        else:
+            msg = rf"^Effective ndim {effective_ndim} is greater than target {ndim}$"
+        subctx = pytest.raises(TypeError, match=msg)
+        with subtests.test(ndim=ndim):
+            with subctx:
+                field.as_ndview(ndim=ndim)
+            with subctx:
+                getattr(field, method_name)()
+
+    assert not hasattr(field, "as_4dview")
+    with (
+        subtests.test(ndim=4),
+        pytest.raises(
+            ValueError,
+            match=r"^Expected ndim to be either 1, 2 or 3\. Got ndim=4$",
+        ),
+    ):
+        field.as_ndview(ndim=4)
 
 
 class TestFileAnalysis:
