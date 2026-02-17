@@ -15,7 +15,7 @@ else:
     "and may be removed in a future version. There are no "
     "plans for a replacement in the public API. "
 )
-def find_nearest(array: FArray1D[F], value: float) -> int:
+def find_nearest(array: FArray1D[F], value: float) -> int:  # pragma: no cover
     from nonos._approx import closest_index
 
     return closest_index(array, value)
@@ -26,7 +26,7 @@ def find_nearest(array: FArray1D[F], value: float) -> int:
     "and may be removed in a future version. There are no "
     "plans for a replacement in the public API. "
 )
-def find_around(array: FArray1D[F], value: float) -> FArray1D[F]:
+def find_around(array: FArray1D[F], value: float) -> FArray1D[F]:  # pragma: no cover
     from nonos._approx import bracketing_values
 
     return np.array(bracketing_values(array, value))
