@@ -31,7 +31,7 @@ def file_analysis(
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
     norb: int | None = None,
-) -> "FArray2D[F]":
+) -> FArray2D[F]:
     if directory is None:
         directory = Path.cwd()
     else:
