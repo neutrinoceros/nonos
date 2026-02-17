@@ -65,11 +65,7 @@ We can select the `RHO` field, reduce it to a vertical
 slice in the midplane, and derive a `Plotable` object mapping the cartesian `'x', 'y'` plane,
 all while ensuring the 0th planet lies close to azimuth 0
 ```py
-p = (
-    ds["RHO"]
-    .vertical_at_midplane()
-    .map("x", "y", rotate_with="planet0.dat")
-)
+p = ds["RHO"].vertical_at_midplane().map("x", "y", rotate_with="planet0.dat")
 ```
 
 Now let's actually visualize our results
@@ -97,7 +93,7 @@ and map the result to the radial axis.
 fig, ax = plt.subplots()
 (
     ds["RHO"]
-    .latitudinal_projection(theta=3*0.05)
+    .latitudinal_projection(theta=3 * 0.05)
     .azimuthal_average()
     .map("R")
     .plot(fig, ax, c="black", title=r"$\Sigma$")
@@ -112,6 +108,7 @@ fig, ax = plt.subplots()
 importing the package, using matplotlib API
 ```python
 import matplotlib.pyplot as plt
+
 plt.style.use("nonos.default")
 ```
 
