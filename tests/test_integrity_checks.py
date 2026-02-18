@@ -1,3 +1,4 @@
+import re
 import sys
 from itertools import chain, permutations
 
@@ -68,7 +69,10 @@ def test_collect_dtype_exceptions(a, b, neq_attributes):
             at1 = getattr(dt1, attr)
             at2 = getattr(dt2, attr)
             with pytest.raises(
-                TypeError, match=rf"^dtype {attr} mismatch \({at1} != {at2}\)$"
+                TypeError,
+                match="^"
+                + re.escape(f"mixed dtype {attr}s: {sorted((at1, at2))}")
+                + "$",
             ):
                 raise exc
 
