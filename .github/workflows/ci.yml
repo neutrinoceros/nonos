@@ -184,7 +184,7 @@ jobs:
         coverage combine
         coverage html --skip-covered --skip-empty
         coverage report --skip-covered --format=markdown >> "$GITHUB_STEP_SUMMARY"
-        coverage report --fail-under=90
+        coverage report --fail-under=91
 
     - name: Upload HTML report
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
