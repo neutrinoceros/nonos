@@ -1,6 +1,7 @@
 __all__ = [
+    "Field",
     "GasDataSet",
-    "GasField",
+    "GasField",  # deprecated
     "NonosLick",
     "Plotable",
     "compute",
@@ -10,6 +11,6 @@ __all__ = [
     "from_data",
     "from_file",
 ]
-from .analysis import GasDataSet, GasField, Plotable
+from .analysis import Field, GasDataSet, GasField, Plotable
 from .satellite import NonosLick, compute, file_analysis, from_data, from_file
 from .tools import find_around, find_nearest

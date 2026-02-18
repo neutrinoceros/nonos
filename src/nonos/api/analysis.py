@@ -226,7 +226,7 @@ def _find_planet_azimuth(
     return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
 
-class GasFieldAttrs(Generic[F], TypedDict, total=False):
+class FieldAttrs(Generic[F], TypedDict, total=False):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
@@ -238,7 +238,7 @@ class GasFieldAttrs(Generic[F], TypedDict, total=False):
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class GasField(Generic[F]):
+class Field(Generic[F]):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
@@ -271,94 +271,52 @@ class GasField(Generic[F]):
         ):
             raise excs
 
-    @classmethod
-    def _legacy_init(
-        cls,
-        field: str,
-        data: FArray3D[F],
-        coords: Coordinates[F],
-        ngeom: str,
-        on: int,
-        operation: str,
-        *,
-        inifile: os.PathLike[str] | None = None,
-        code: str | None = None,
-        directory: os.PathLike[str] | None = None,
-        rotate_by: float | None = None,
-        rotate_with: str | None = None,
-    ) -> "GasField[F]":
-        loader = Loader.resolve(
-            code=code,
-            parameter_file=inifile,
-            directory=Path.cwd() if directory is None else Path(directory),
-        )
-        return GasField(
-            name=field,
-            data=data,
-            coordinates=coords,
-            native_geometry=Geometry(ngeom),
-            snapshot_uid=on,
-            operation=operation,
-            loader=loader,
-            rotate_by=_resolve_rotate_by(
-                rotate_by=rotate_by,
-                rotate_with=rotate_with,
-                planet_number_argument=("rotate_grid", None),
-                stacklevel=2,
-                planet_azimuth_finder=partial(
-                    _find_planet_azimuth,
-                    loader=loader,
-                    snapshot_uid=on,
-                ),
-            ),
-        )
-
     @property
     @deprecated(
-        "GasField.field is deprecated since v0.20.0, "
+        "(Gas)Field.field is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.name instead"
+        "Use Field.name instead"
     )
     def field(self) -> str:  # pragma: no cover
         return self.name
 
     @property
     @deprecated(
-        "GasField.inifile  is deprecated since v0.20.0, "
+        "Field.inifile  is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.loader.parameter_file instead"
+        "Use Field.loader.parameter_file instead"
     )
     def inifile(self) -> Path:  # pragma: no cover
         return self.loader.parameter_file
 
     @property
     @deprecated(
-        "GasField.coords is deprecated since v0.20.0, "
+        "(Gas)Field.coords is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.coordinates instead"
+        "Use Field.coordinates instead"
     )
     def coords(self) -> Coordinates[F]:
         return self.coordinates
 
     @property
     @deprecated(
-        "GasField.on is deprecated since v0.20.0, "
+        "(Gas)Field.on is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.snapshot_uid instead"
+        "Use Field.snapshot_uid instead"
     )
     def on(self) -> int:  # pragma: no cover
         return self.snapshot_uid
 
     @property
     @deprecated(
-        "GasField.directory is deprecated since v0.20.0, "
+        "(Gas)Field.directory is deprecated since v0.20.0, "
         "and may be removed in a future version. "
-        "Use GasField.loader.parameter_file.parent instead"
+        "Use Field.loader.parameter_file.parent instead"
     )
     def directory(self) -> Path:  # pragma: no cover
         return self.loader.parameter_file.parent
 
-    def replace(self, **substitutions: Unpack[GasFieldAttrs[F]]) -> "GasField[F]":
+    def replace(self, **substitutions: Unpack[FieldAttrs[F]]) -> "Field[F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
@@ -751,7 +709,7 @@ class GasField(Generic[F]):
         theta: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         default_suffix = "latitudinal_projection"
         if theta is not None:
             default_suffix += str(np.pi / 2 - theta)
@@ -844,7 +802,7 @@ class GasField(Generic[F]):
         z: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         default_suffix = "vertical_projection"
         if z is not None:
             default_suffix += str(z)
@@ -910,7 +868,7 @@ class GasField(Generic[F]):
         self,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="vertical_at_midplane",
@@ -957,7 +915,7 @@ class GasField(Generic[F]):
         theta: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
@@ -1012,7 +970,7 @@ class GasField(Generic[F]):
         z: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"vertical_at_z{z}",
@@ -1054,7 +1012,7 @@ class GasField(Generic[F]):
         phi: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"azimuthal_at_phi{phi}",
@@ -1097,7 +1055,7 @@ class GasField(Generic[F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
@@ -1113,7 +1071,7 @@ class GasField(Generic[F]):
         aziphip = self.azimuthal_at_phi(phi=phip)
         return aziphip.replace(operation=operation)
 
-    def azimuthal_average(self, *, operation_name: str | None = None) -> "GasField[F]":
+    def azimuthal_average(self, *, operation_name: str | None = None) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix="azimuthal_average",
@@ -1157,7 +1115,7 @@ class GasField(Generic[F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
@@ -1215,7 +1173,7 @@ class GasField(Generic[F]):
         distance: float = 1.0,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         operation = self._resolve_operation_name(
             prefix=self.operation,
             default_suffix=f"radial_at_r{distance}",
@@ -1254,7 +1212,7 @@ class GasField(Generic[F]):
         vmax: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         if (vmin is None) or (vmax is None):
             raise ValueError(
                 f"The radial interval {vmin=} and {vmax=} should be defined"
@@ -1306,7 +1264,7 @@ class GasField(Generic[F]):
             operation=operation,
         )
 
-    def diff(self, on_2: int) -> "GasField[F]":
+    def diff(self, on_2: int) -> "Field[F]":
         ds_2 = GasDataSet(
             on_2,
             geometry=self.native_geometry,
@@ -1326,7 +1284,7 @@ class GasField(Generic[F]):
         *,
         rotate_with: str | None = None,
         rotate_by: float | None = None,
-    ) -> "GasField[F]":
+    ) -> "Field[F]":
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
@@ -1363,6 +1321,56 @@ class GasField(Generic[F]):
         return self.replace(
             data=ret_data.astype("float32", copy=False),
             operation=operation,
+        )
+
+
+class GasField(Field[F]):
+    @deprecated(
+        "nonos.api.analysis.GasField is deprecated since v0.20.0 "
+        "and might be removed in a future version. "
+        "In its current state, the class cannot be instantiated: the object created "
+        "is already an instance of the replacement class, Field. "
+        "Use Field directly to silence this warning."
+    )
+    def __new__(  # type: ignore[misc]
+        cls,
+        field: str,
+        data: FArray3D[F],
+        coords: Coordinates[F],
+        ngeom: str,
+        on: int,
+        operation: str,
+        *,
+        inifile: os.PathLike[str] | None = None,
+        code: str | None = None,
+        directory: os.PathLike[str] | None = None,
+        rotate_by: float | None = None,
+        rotate_with: str | None = None,
+    ) -> "Field[F]":
+        loader = Loader.resolve(
+            code=code,
+            parameter_file=inifile,
+            directory=Path.cwd() if directory is None else Path(directory),
+        )
+        return Field(
+            name=field,
+            data=data,
+            coordinates=coords,
+            native_geometry=Geometry(ngeom),
+            snapshot_uid=on,
+            operation=operation,
+            loader=loader,
+            rotate_by=_resolve_rotate_by(
+                rotate_by=rotate_by,
+                rotate_with=rotate_with,
+                planet_number_argument=("rotate_grid", None),
+                stacklevel=2,
+                planet_azimuth_finder=partial(
+                    _find_planet_azimuth,
+                    loader=loader,
+                    snapshot_uid=on,
+                ),
+            ),
         )
 
 
@@ -1465,18 +1473,15 @@ class GasDataSet(Generic[D, F]):
             self._read.x3,
         )
         raw_data: dict[str, FArray3D[F]] = self._read.data
-        self.dict: dict[str, GasField[F]] = {}
+        self.dict: dict[str, Field[F]] = {}
         for key, array in raw_data.items():
-            self.dict[key] = GasField._legacy_init(
-                key,
-                array,
-                self.coordinates,
-                self.native_geometry,
-                self.snapshot_uid,
-                operation="",
-                inifile=self._loader.parameter_file,
-                code=code,
-                directory=directory,
+            self.dict[key] = Field(
+                name=key,
+                data=array,
+                coordinates=self.coordinates,
+                native_geometry=self.native_geometry,
+                snapshot_uid=self.snapshot_uid,
+                loader=self._loader,
             )
 
         # backward compatibility for self.params
@@ -1508,7 +1513,7 @@ class GasDataSet(Generic[D, F]):
     def coords(self) -> Coordinates[F]:
         return self.coordinates
 
-    def __getitem__(self, key: str) -> "GasField[F]":
+    def __getitem__(self, key: str) -> "Field[F]":
         if key in self.dict:
             return self.dict[key]
         else:
@@ -1522,7 +1527,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.keys()
 
-    def values(self) -> ValuesView["GasField[F]"]:
+    def values(self) -> ValuesView["Field[F]"]:
         """
         Returns
         =======
@@ -1530,7 +1535,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.values()
 
-    def items(self) -> ItemsView[str, "GasField[F]"]:
+    def items(self) -> ItemsView[str, "Field[F]"]:
         """
         Returns
         =======
