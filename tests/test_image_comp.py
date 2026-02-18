@@ -108,7 +108,7 @@ def test_nonoslick_method(method, tmp_path):
         "geometry": "cartesian",
         "x1": np.linspace(0, 1, root_size + 1),
         "x2": np.linspace(0, 1, root_size + 1),
-        "x3": np.array([1]),
+        "x3": np.array([1.0]),
     }
     fake_coords = Coordinates(**fake_grid)
 

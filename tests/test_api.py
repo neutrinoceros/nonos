@@ -45,26 +45,26 @@ def test_gasfield_immutable_data(stub_field):
     [
         pytest.param(
             "f4",
-            RaisesExc(TypeError, match=r"^dtype itemsize mismatch \(4 != 8\)$"),
+            RaisesExc(TypeError, match=r"^mixed dtype itemsizes: \[4, 8\]$"),
             id="itemsize",
         ),
         pytest.param(
             "i8",
-            RaisesExc(TypeError, match=r"^dtype kind mismatch \(i != f\)$"),
+            RaisesExc(TypeError, match=r"^mixed dtype kinds: \['f', 'i'\]$"),
             id="kind",
         ),
         pytest.param(
             "i4",
             RaisesGroup(
-                RaisesExc(TypeError, match=r"^dtype itemsize mismatch \(4 != 8\)$"),
-                RaisesExc(TypeError, match=r"^dtype kind mismatch \(i != f\)$"),
+                RaisesExc(TypeError, match=r"^mixed dtype itemsizes: \[4, 8\]$"),
+                RaisesExc(TypeError, match=r"^mixed dtype kinds: \['f', 'i'\]$"),
                 match="multiple issues with input dtypes",
             ),
             id="all",
         ),
     ],
 )
-def test_gasfield_mismatch_dtypes_size(stub_field, newtype, ctx):
+def test_gasfield_mismatch_dtypes(stub_field, newtype, ctx):
     arr = stub_field.as_3dview().astype(newtype)
     with ctx:
         stub_field.replace(data=arr)

@@ -1,8 +1,9 @@
-from itertools import chain, combinations
+from itertools import chain, combinations, permutations
 
 import numpy as np
 import numpy.testing as npt
 import pytest
+from pytest import RaisesExc, RaisesGroup
 
 from nonos._geometry import (
     _AXIS_TO_STR,
@@ -71,6 +72,57 @@ def test_native_plane_from_target_plane(native_geometry, axes):
 def test_module_constants():
     assert set(_STR_TO_AXIS.values()) == set(Axis)
     assert set(_AXIS_TO_STR.keys()) == set(Axis)
+
+
+@pytest.mark.parametrize(
+    "dt, ctx",
+    [
+        pytest.param(
+            "f4",
+            RaisesExc(TypeError, match=r"^mixed dtype itemsizes: \[4, 8\]$"),
+            id="itemsize",
+        ),
+        pytest.param(
+            "i8",
+            RaisesExc(TypeError, match=r"^mixed dtype kinds: \['f', 'i'\]$"),
+            id="kind",
+        ),
+        pytest.param(
+            "i4",
+            RaisesGroup(
+                RaisesExc(TypeError, match=r"^mixed dtype itemsizes: \[4, 8\]$"),
+                RaisesExc(TypeError, match=r"^mixed dtype kinds: \['f', 'i'\]$"),
+                match="multiple issues with input dtypes",
+            ),
+            id="all",
+        ),
+    ],
+)
+def test_coordinates_mismatch_dtypes(dt, ctx):
+    with ctx:
+        Coordinates(
+            geometry=Geometry.CARTESIAN,
+            x1=np.linspace(0, 5, 8, dtype=">f8"),
+            x2=np.linspace(0, 5, 8, dtype=">f8"),
+            x3=np.arange(5, dtype=dt),
+        )
+
+
+@pytest.mark.parametrize(
+    "x1, x2, x3",
+    permutations(
+        [np.linspace(0, 8, 8), np.linspace(0, 8, 8), np.linspace(0, 8, 8).reshape(4, 2)]
+    ),
+)
+def test_coordinates_invalid_ndim(x1, x2, x3):
+    with pytest.raises(
+        TypeError,
+        match=(
+            "^Expected input arrays to all be 1D. "
+            f"Got {x1.ndim=}, {x2.ndim=}, {x3.ndim=}$"
+        ),
+    ):
+        Coordinates(geometry=Geometry.CARTESIAN, x1=x1, x2=x2, x3=x3)
 
 
 @pytest.mark.parametrize(

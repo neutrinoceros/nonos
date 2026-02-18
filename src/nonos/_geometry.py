@@ -14,6 +14,7 @@ from typing import Generic, cast, final, overload
 import numpy as np
 
 from nonos._approx import bracketing_values
+from nonos._integrity_checks import collect_dtype_exceptions, compile_exceptions
 from nonos._types import F, FArray1D, StrDict
 
 if sys.version_info >= (3, 11):
@@ -229,18 +230,34 @@ class Coordinates(Generic[F]):
     x3: FArray1D[F]
 
     def __post_init__(self) -> None:
-        x1 = self.x1
-        x2 = self.x2
-        x3 = self.x3
-        if x1.ndim != 1 or x2.ndim != 1 or x3.ndim != 1:
-            raise ValueError(
-                "Expected input arrays to all be 1D. "
-                f"Got {x1.ndim=}, {x2.ndim=}, {x3.ndim=}"
-            )
         for attr in ("x1", "x2", "x3"):
             arr = getattr(self, attr)
             if len(arr) == 1:
                 object.__setattr__(self, attr, np.repeat(arr, 2))
+
+        x1 = self.x1
+        x2 = self.x2
+        x3 = self.x3
+        excs = [
+            (
+                "multiple issues with input dtypes",
+                collect_dtype_exceptions(x1.dtype, x2.dtype, x3.dtype),
+            )
+        ]
+        if x1.ndim != 1 or x2.ndim != 1 or x3.ndim != 1:
+            excs.append(
+                (
+                    "unused",
+                    [
+                        TypeError(
+                            "Expected input arrays to all be 1D. "
+                            f"Got {x1.ndim=}, {x2.ndim=}, {x3.ndim=}"
+                        )
+                    ],
+                )
+            )
+        if exc := compile_exceptions("multiple issues with input arrays", *excs):
+            raise exc
 
     @property
     def shape(self) -> tuple[int, int, int]:

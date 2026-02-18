@@ -33,18 +33,12 @@ def collect_shape_exceptions(
     return exceptions
 
 
-def collect_dtype_exceptions(
-    dt1: np.dtype[Any],
-    dt2: np.dtype[Any],
-    /,
-) -> list[Exception]:
+def collect_dtype_exceptions(*dtypes: np.dtype[Any]) -> list[Exception]:
     exceptions: list[Exception] = []
-    if dt1.kind != dt2.kind:
-        exceptions.append(TypeError(f"dtype kind mismatch ({dt1.kind} != {dt2.kind})"))
-    if dt1.itemsize != dt2.itemsize:
-        exceptions.append(
-            TypeError(f"dtype itemsize mismatch ({dt1.itemsize} != {dt2.itemsize})")
-        )
+    if len(unique_kinds := {dt.kind for dt in dtypes}) > 1:
+        exceptions.append(TypeError(f"mixed dtype kinds: {sorted(unique_kinds)}"))
+    if len(unique_sizes := {dt.itemsize for dt in dtypes}) > 1:
+        exceptions.append(TypeError(f"mixed dtype itemsizes: {sorted(unique_sizes)}"))
     return exceptions
 
 
