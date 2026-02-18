@@ -10,7 +10,8 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
 from nonos._geometry import Coordinates
-from nonos.api import GasDataSet, GasField, NonosLick
+from nonos.api import Field, GasDataSet, NonosLick
+from nonos.loaders import Loader
 from nonos.styling import set_mpl_style
 
 
@@ -130,33 +131,18 @@ def test_nonoslick_method(method, tmp_path):
     with open(tmp_path / "idefix.ini", "wb") as fh:
         inifix.dump(data, fh)
 
-    Vx = GasField._legacy_init(
-        field="Vx",
-        data=fake_Vx,
-        coords=fake_coords,
-        ngeom=fake_coords.geometry,
-        on=0,
-        operation="",
-        directory=tmp_path,
-    )
-    Vy = GasField._legacy_init(
-        field="Vy",
-        data=fake_Vy,
-        coords=fake_coords,
-        ngeom=fake_coords.geometry,
-        on=0,
-        operation="",
-        directory=tmp_path,
-    )
-    F = GasField._legacy_init(
-        field="F",
-        data=fake_F,
-        coords=fake_coords,
-        ngeom=fake_coords.geometry,
-        on=0,
-        operation="",
-        directory=tmp_path,
-    )
+    loader = Loader.resolve(directory=tmp_path)
+    Vx, Vy, F = [
+        Field(
+            name=name,
+            data=arr,
+            coordinates=fake_coords,
+            native_geometry=fake_coords.geometry,
+            snapshot_uid=0,
+            loader=loader,
+        )
+        for name, arr in [("Vx", fake_Vx), ("Vy", fake_Vy), ("F", fake_F)]
+    ]
     lick = NonosLick(
         xxmed,
         yymed,

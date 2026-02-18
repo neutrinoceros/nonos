@@ -7,13 +7,32 @@ import pytest
 from pytest import RaisesExc, RaisesGroup
 
 from nonos._geometry import Coordinates, Geometry
-from nonos.api import GasDataSet, GasField, file_analysis
+from nonos.api import Field, GasDataSet, GasField, file_analysis
 from nonos.loaders import Loader
+
+
+def test_gasfield_deprecation(test_data_dir):
+    with pytest.deprecated_call():
+        gs = GasField(
+            field="test",
+            data=np.arange(30, dtype="float64").reshape(2, 3, 5),
+            coords=Coordinates(
+                geometry=Geometry.CARTESIAN,
+                x1=np.linspace(0, 1, 3),
+                x2=np.linspace(0, 1, 4),
+                x3=np.linspace(0, 1, 6),
+            ),
+            ngeom=Geometry.CARTESIAN,
+            on=0,
+            operation="",
+            directory=test_data_dir / "idefix_planet3d",
+        )
+    assert type(gs) is Field
 
 
 @pytest.fixture
 def stub_field(test_data_dir):
-    return GasField(
+    return Field(
         name="test",
         data=np.arange(30, dtype="float64").reshape(2, 3, 5),
         coordinates=Coordinates(
@@ -30,7 +49,7 @@ def stub_field(test_data_dir):
     )
 
 
-def test_gasfield_immutable_data(stub_field):
+def test_field_immutable_data(stub_field):
     arr = np.arange(30, dtype="float64").reshape(2, 3, 5)
     field = stub_field.replace(data=arr)
     npt.assert_array_equal(field.data, arr)
@@ -64,7 +83,7 @@ def test_gasfield_immutable_data(stub_field):
         ),
     ],
 )
-def test_gasfield_mismatch_dtypes(stub_field, newtype, ctx):
+def test_field_mismatch_dtypes(stub_field, newtype, ctx):
     arr = stub_field.as_3dview().astype(newtype)
     with ctx:
         stub_field.replace(data=arr)
@@ -82,7 +101,7 @@ def test_gasfield_mismatch_dtypes(stub_field, newtype, ctx):
         ((2, 1, 1), 1),
     ],
 )
-def test_gasfield_ndviews(stub_field, shape, effective_ndim, subtests):
+def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
     size = prod(shape)
     arr = np.arange(size, dtype="float64").reshape(shape)
 

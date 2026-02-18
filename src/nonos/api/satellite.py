@@ -3,14 +3,14 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias
 
 import numpy as np
 from packaging.version import Version
 
 from nonos._geometry import Coordinates
 from nonos._types import F, FArray2D, FArray3D, StrDict
-from nonos.api.analysis import GasField, Plotable
+from nonos.api.analysis import Field, Plotable
 from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 13):
@@ -77,9 +77,9 @@ class NonosLick(Generic[F]):
         self,
         x: FArray2D[F],
         y: FArray2D[F],
-        lx: GasField[F],
-        ly: GasField[F],
-        field: GasField[F],
+        lx: Field[F],
+        ly: Field[F],
+        field: Field[F],
         *,
         xmin: float | None = None,
         xmax: float | None = None,
@@ -208,20 +208,20 @@ class NonosLick(Generic[F]):
 @deprecated(
     "nonos.api.satellite.compute is deprecated since v0.20.0 "
     "and may be removed in a future version. "
-    "Use GasField.replace instead."
+    "Use Field.replace instead."
 )
 def compute(
     field: str,
     data: FArray3D[F],
-    ref: GasField[F],
-) -> GasField[F]:
+    ref: Field[F],
+) -> Field[F]:
     return ref.replace(name=field, data=data)
 
 
 @deprecated(
     "nonos.api.satellite.from_data is deprecated since v0.11.0 "
     "and may be removed in a future version. "
-    "Use GasField.replace instead."
+    "Use Field.replace instead."
 )
 def from_data(
     *,
@@ -233,17 +233,15 @@ def from_data(
     inifile: os.PathLike[str] | None = None,
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
-) -> GasField[F]:  # pragma: no cover
-    return GasField._legacy_init(
-        field,
-        data,
-        coords,
-        coords.geometry,
-        on,
+) -> Field[F]:  # pragma: no cover
+    return Field(
+        name=field,
+        data=data,
+        coordinates=coords,
+        native_geometry=coords.geometry,
+        snapshot_uid=on,
+        loader=Loader.resolve(code=code, parameter_file=inifile, directory=directory),
         operation=operation,
-        inifile=inifile,
-        code=code,
-        directory=directory,
     )
 
 
@@ -253,7 +251,7 @@ def from_file(
     operation: str,
     on: int,
     directory: os.PathLike[str] | None = None,
-) -> GasField[F]:
+) -> Field[Any]:
     if directory is None:
         directory = Path.cwd()
     else:
@@ -270,12 +268,12 @@ def from_file(
     with open(fileout, "rb") as file:
         ret_data = np.load(file, allow_pickle=True)
 
-    return GasField._legacy_init(
-        field,
-        ret_data,
-        ret_coords,
-        geometry,
-        on,
+    return Field(
+        name=field,
+        data=ret_data,
+        coordinates=ret_coords,
+        native_geometry=geometry,
+        snapshot_uid=on,
+        loader=Loader.resolve(directory=directory),
         operation=operation,
-        directory=directory,
     )
