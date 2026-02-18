@@ -33,6 +33,7 @@ dependencies = [
     "matplotlib>=3.7.0",
     "numpy>=1.21.2",
     "packaging>=22.0",
+    "exceptiongroup>=1.0.0 ; python_full_version < '3.11'",
     "typing-extensions>=4.5.0 ; python_version < '3.13'",
 ]
 
@@ -72,6 +73,7 @@ typecheck = [
     "nonos[all]",
     "mypy>=1.13.0",
     "scipy-stubs>=1.15.3.0",
+    "exceptiongroup", # this can be removed once Python 3.10 is dropped
 ]
 docs = [
     "nonos[cli]",
