@@ -6,7 +6,7 @@ import pytest
 from nonos_cli.parsing import (
     parse_image_format,
     parse_range,
-    parse_snapshot_number_range,
+    parse_snapshot_range,
     range_converter,
     userval_or_default,
 )
@@ -41,26 +41,26 @@ def test_userval_or_default(received, expected):
     ],
 )
 def test_range_outputs(received, expected):
-    assert parse_snapshot_number_range(received) == expected
+    assert parse_snapshot_range(received) == expected
 
 
 def test_from_maxval():
     maxval = 1.0
-    assert parse_snapshot_number_range(None, maxval=maxval) == [maxval]
+    assert parse_snapshot_range(None, maxval=maxval) == [maxval]
 
 
 def test_unparsable_data():
     with pytest.raises(
         ValueError, match="Can't parse a range from unset values without a max."
     ):
-        parse_snapshot_number_range("unset")
+        parse_snapshot_range("unset")
 
 
 def test_invalid_request():
     with pytest.raises(
         ValueError, match="No output beyond 5 is available, but 10 was requested."
     ):
-        parse_snapshot_number_range([1, 10], maxval=5)
+        parse_snapshot_range([1, 10], maxval=5)
 
 
 def test_invalid_nargs():
@@ -70,7 +70,7 @@ def test_invalid_nargs():
             "Can't parse a range from sequence [1, 2, 3, 4] with more than 3 values."
         ),
     ):
-        parse_snapshot_number_range([1, 2, 3, 4])
+        parse_snapshot_range([1, 2, 3, 4])
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_invalid_nargs_parse_range(dim, extent):
 )
 def test_invalid_range(received):
     with pytest.raises(ValueError, match="Can't parse a range with max < min."):
-        parse_snapshot_number_range(received)
+        parse_snapshot_range(received)
 
 
 @pytest.mark.parametrize(

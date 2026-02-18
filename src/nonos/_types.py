@@ -182,8 +182,8 @@ class IniData:
 
 class BinReader(Protocol, Generic[F]):
     @staticmethod
-    def parse_snapshot_number_and_filename(
-        file_or_number: os.PathLike[str] | int,
+    def parse_snapshot_uid_and_filename(
+        file_or_uid: os.PathLike[str] | int,
         *,
         directory: os.PathLike[str],
         prefix: str,

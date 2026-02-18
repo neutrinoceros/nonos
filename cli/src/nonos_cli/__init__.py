@@ -35,7 +35,7 @@ from nonos_cli.parsing import (
     is_set,
     parse_image_format,
     parse_range,
-    parse_snapshot_number_range,
+    parse_snapshot_range,
     range_converter,
     userval_or_default,
 )
@@ -524,9 +524,7 @@ def main(argv: list[str] | None = None) -> int:
         requested = available
     else:
         try:
-            requested = set(
-                parse_snapshot_number_range(args["on"], maxval=max(available))
-            )
+            requested = set(parse_snapshot_range(args["on"], maxval=max(available)))
         except ValueError as exc:
             logger.error("{}", exc)
             return 1
