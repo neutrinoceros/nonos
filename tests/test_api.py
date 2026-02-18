@@ -23,7 +23,7 @@ def stub_field(test_data_dir):
             x3=np.linspace(0, 1, 6),
         ),
         native_geometry=Geometry.CARTESIAN,
-        snapshot_number=0,
+        snapshot_uid=0,
         loader=Loader.resolve(
             directory=test_data_dir / "idefix_planet3d",
         ),
@@ -158,7 +158,7 @@ class TestFileAnalysis:
         assert isinstance(result, np.ndarray)
         assert result.shape == (9, 72)
 
-    def test_norb_not_idefix(self, test_data_dir):
+    def test_norb_not_uidefix(self, test_data_dir):
         with pytest.raises(NotImplementedError):
             file_analysis(
                 "planet0.dat",

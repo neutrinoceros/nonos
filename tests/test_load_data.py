@@ -178,7 +178,7 @@ def test_api_vtk_by_name(test_data_dir, from_abs_path):
         input_ = "data.0500.vtk"
 
     ds = GasDataSet(input_)
-    assert ds.snapshot_number == 500
+    assert ds.snapshot_uid == 500
 
     with pytest.raises(FileNotFoundError):
         GasDataSet(input_.replace("data.0500", "datawrong.0500"))
@@ -205,7 +205,7 @@ def test_api_fluid_fargo3d(test_data_dir):
         GasDataSet(*args, **kwargs)
 
 
-def test_api_fluid_idefix(test_data_dir):
+def test_api_fluid_uidefix(test_data_dir):
     with pytest.warns(
         UserWarning,
         match="Unused keyword argument: 'fluid'",
@@ -249,7 +249,7 @@ def test_api_fluid_idefix(test_data_dir):
     ],
 )
 # fmt: on
-def test_api_vtk_slices_idefix(test_data_dir, geometry, slice_no, operation_name, operation_args, axis):
+def test_api_vtk_slices_uidefix(test_data_dir, geometry, slice_no, operation_name, operation_args, axis):
     on = 9
     ds = GasDataSet(test_data_dir / "idefix_vtk_slices" / geometry / f"data.{on:04d}.vtk")
     ds_phi_cut = GasDataSet(
