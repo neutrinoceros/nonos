@@ -33,25 +33,20 @@ class TestParseRotationAngle:
     example_inputs = {
         "rotate_by": 1.0,
         "rotate_with": "planet0.dat",
-        "planet_number_argument": ("test", 0),
     }
     default_kwargs = {
         "rotate_by": None,
         "rotate_with": None,
-        "planet_number_argument": ("test", None),
         "planet_azimuth_finder": mock_planet_azimuth_finder,
-        "stacklevel": 2,
     }
 
     @pytest.mark.parametrize("kwargs", combinations(example_inputs.items(), 2))
     def test_two_inputs(self, kwargs):
         conf = {**self.default_kwargs, **dict(kwargs)}
-        with pytest.raises(TypeError, match="Can only process one argument"):
-            _resolve_rotate_by(**conf)
-
-    def test_all_inputs(self):
-        conf = {**self.default_kwargs, **self.example_inputs}
-        with pytest.raises(TypeError, match="Can only process one argument"):
+        with pytest.raises(
+            TypeError,
+            match=r"^rotate_by and rotate_with cannot be specified at the same time$",
+        ):
             _resolve_rotate_by(**conf)
 
     def test_from_rotate_with(self):
@@ -60,13 +55,4 @@ class TestParseRotationAngle:
             "rotate_with": self.example_inputs["rotate_with"],
         }
         result = _resolve_rotate_by(**conf)
-        assert result == 0.0
-
-    def test_from_planet_number(self):
-        conf = {
-            **self.default_kwargs,
-            "planet_number_argument": self.example_inputs["planet_number_argument"],
-        }
-        with pytest.deprecated_call():
-            result = _resolve_rotate_by(**conf)
         assert result == 0.0
