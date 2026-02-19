@@ -426,7 +426,6 @@ class Field(Generic[F]):
         /,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-        planet_corotation: int | None = None,
     ) -> Plotable[D1, F]: ...
     @overload
     def map(
@@ -436,7 +435,6 @@ class Field(Generic[F]):
         /,
         rotate_by: float | None = None,
         rotate_with: str | None = None,
-        planet_corotation: int | None = None,
     ) -> Plotable[D2, F]: ...
     def map(  # type: ignore[no-untyped-def]
         self,
@@ -445,13 +443,10 @@ class Field(Generic[F]):
         /,
         rotate_by=None,
         rotate_with=None,
-        planet_corotation=None,  # deprecated
     ):
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
-            planet_number_argument=("planet_corotation", planet_corotation),
-            stacklevel=2,
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
                 loader=self.loader,
@@ -1280,7 +1275,6 @@ class Field(Generic[F]):
 
     def rotate(
         self,
-        planet_corotation: int | None = None,
         *,
         rotate_with: str | None = None,
         rotate_by: float | None = None,
@@ -1288,13 +1282,11 @@ class Field(Generic[F]):
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
-            planet_number_argument=("planet_corotation", planet_corotation),
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
                 loader=self.loader,
                 snapshot_uid=self.snapshot_uid,
             ),
-            stacklevel=2,
         )
 
         operation = self.operation
@@ -1363,8 +1355,6 @@ class GasField(Field[F]):
             rotate_by=_resolve_rotate_by(
                 rotate_by=rotate_by,
                 rotate_with=rotate_with,
-                planet_number_argument=("rotate_grid", None),
-                stacklevel=2,
                 planet_azimuth_finder=partial(
                     _find_planet_azimuth,
                     loader=loader,

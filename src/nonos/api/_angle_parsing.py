@@ -1,5 +1,4 @@
 import sys
-import warnings
 from math import isclose
 from typing import Protocol
 
@@ -47,35 +46,19 @@ def _resolve_rotate_by(
     *,
     rotate_by: float | None,
     rotate_with: str | None,
-    planet_number_argument: tuple[str, int | None],
     planet_azimuth_finder: PlanetAzimuthFinder,
-    stacklevel: int,
 ) -> float:
-    planet_number_argname, planet_number = planet_number_argument
-    defined_args = {rotate_with, rotate_by, planet_number} - {None}
-    if not defined_args:
+    if not (defined_args := {rotate_with, rotate_by} - {None}):
         # no rotation specified
         return 0.0
 
     if len(defined_args) > 1:
         raise TypeError(
-            "Can only process one argument out of "
-            f"(rotate_by, rotate_with, {planet_number_argname})"
+            "rotate_by and rotate_with cannot be specified at the same time"
         )
 
     # beyond this point, we know that exactly one parameter was specified,
     # let's funnel it down to a rotate_by form
-    if planet_number is not None:
-        warnings.warn(
-            f"The {planet_number_argname} argument is deprecated since v0.11.0 "
-            "and may be removed in a future version. "
-            "Instead, please use either rotate_by (float) "
-            "or rotate_with (str path to planet log file).",
-            DeprecationWarning,
-            stacklevel=stacklevel + 1,
-        )
-        rotate_with = _resolve_planet_file(planet_number=planet_number)
-
     if rotate_with is not None:
         rotate_by = planet_azimuth_finder(planet_file=rotate_with)
 
