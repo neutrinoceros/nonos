@@ -103,8 +103,8 @@ fig, ax = plt.subplots()
 
 ### Reusing `nonos`' style
 
-`nonos-cli` uses a custom style that can be reused programmatically, without
-importing the package, using matplotlib API
+`nonos` comes with a matplotlib stylesheet, used by `nonos-cli`, that can be reused
+programmatically, without importing the package, using matplotlib API
 ```python
 import matplotlib.style
 

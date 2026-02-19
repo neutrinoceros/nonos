@@ -38,7 +38,7 @@ def _parse_planet_file(
     planet_file: str | None = None,
     planet_number: int | None = None,
 ) -> str:  # pragma: no cover
-    # backward compatibility layer for nonos-cli
+    # backward compatibility layer for nonos-cli 0.1.0
     return _resolve_planet_file(planet_file=planet_file, planet_number=planet_number)
 
 
