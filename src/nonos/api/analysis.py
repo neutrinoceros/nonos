@@ -22,7 +22,6 @@ import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
 from matplotlib.ticker import SymmetricalLogLocator
 
-from nonos._approx import bracketing_values, closest_index, closest_value
 from nonos._geometry import (
     Axis,
     Coordinates,
@@ -52,6 +51,7 @@ from nonos.api._angle_parsing import (
     _resolve_planet_file,
     _resolve_rotate_by,
 )
+from nonos.api.tools import bracketing_values, closest_index, closest_value
 from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 11):
