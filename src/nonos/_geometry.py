@@ -13,7 +13,6 @@ from typing import Generic, cast, final, overload
 
 import numpy as np
 
-from nonos._approx import bracketing_values
 from nonos._integrity_checks import collect_dtype_exceptions, compile_exceptions
 from nonos._types import F, FArray1D, StrDict
 
@@ -300,6 +299,8 @@ class Coordinates(Generic[F]):
         return cast(FArray1D[F], 0.5 * (arr[1:] + arr[:-1]))
 
     def project_along(self, axis: Axis, position: float) -> Coordinates[F]:
+        from nonos.api.tools import bracketing_values  # avoid an import cycle
+
         idx = self.get_axis_index(axis)
         arrs = [self.get_axis_array(ax) for ax in self.axes]
         arrs[idx] = bracketing_values(arrs[idx], position).as_array(dtype=self.dtype)

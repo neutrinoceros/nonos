@@ -5,8 +5,7 @@ import pytest
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
-from nonos._approx import closest_index
-from nonos.api import GasDataSet, compute, from_data
+from nonos.api import GasDataSet, closest_index, compute, from_data
 
 
 def test_plot_planet_corotation(test_data_dir):
