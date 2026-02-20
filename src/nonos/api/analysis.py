@@ -272,6 +272,10 @@ class Field(Generic[F]):
             raise excs
 
     @property
+    def snapshot_number(self) -> int:  # pragma: no cover
+        return self.snapshot_uid
+
+    @property
     @deprecated(
         "(Gas)Field.field is deprecated since v0.20.0, "
         "and may be removed in a future version. "
