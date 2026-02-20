@@ -7,6 +7,7 @@ __all__ = [
     "D",
     "F",
     "FArray",
+    "FArray0D",
     "FArray1D",
     "FArray2D",
     "FArray3D",
@@ -23,7 +24,15 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeAlias, TypeVar, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Protocol,
+    TypeAlias,
+    TypeVar,
+    final,
+)
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
@@ -38,14 +47,16 @@ if TYPE_CHECKING:
 
 StrDict: TypeAlias = dict[str, Any]
 
+D0: TypeAlias = tuple[()]
 D1: TypeAlias = tuple[int]
 D2: TypeAlias = tuple[int, int]
 D3: TypeAlias = tuple[int, int, int]
 
-D = TypeVar("D", D1, D2, D3)
+D = TypeVar("D", D0, D1, D2, D3)
 F = TypeVar("F", f32, f64)
 
 FArray: TypeAlias = np.ndarray[D, np.dtype[F]]
+FArray0D: TypeAlias = FArray[D0, F]
 FArray1D: TypeAlias = FArray[D1, F]
 FArray2D: TypeAlias = FArray[D2, F]
 FArray3D: TypeAlias = FArray[D3, F]

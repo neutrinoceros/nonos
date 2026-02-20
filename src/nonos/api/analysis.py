@@ -35,7 +35,18 @@ from nonos._integrity_checks import (
     compile_exceptions,
 )
 from nonos._readers.binary import NPYReader
-from nonos._types import D1, D2, D, F, FArray, FArray1D, FArray2D, FArray3D, PlanetData
+from nonos._types import (
+    D1,
+    D2,
+    D,
+    F,
+    FArray,
+    FArray0D,
+    FArray1D,
+    FArray2D,
+    FArray3D,
+    PlanetData,
+)
 from nonos.api._angle_parsing import (
     _fequal,
     _resolve_planet_file,
@@ -344,7 +355,7 @@ class Field(Generic[F]):
         return s[0] == 1, s[1] == 1, s[2] == 1
 
     @property
-    def effective_ndim(self) -> Literal[1, 2, 3]:
+    def effective_ndim(self) -> Literal[0, 1, 2, 3]:
         """
         The effective dimensionality of the underlying data.
         This corresponds to the number of dimensions with more than a single element.
@@ -352,9 +363,11 @@ class Field(Generic[F]):
         .. versionadded: 0.20.0
         """
         one_count = sum(self._reduced_dimensions)
-        assert 0 <= one_count < 3
+        assert 0 <= one_count <= 3
         return cast(Literal[1, 2, 3], 3 - one_count)
 
+    @overload
+    def as_ndview(self, *, ndim: Literal[0]) -> FArray0D[F]: ...
     @overload
     def as_ndview(self, *, ndim: Literal[1]) -> FArray1D[F]: ...
     @overload
@@ -367,7 +380,7 @@ class Field(Generic[F]):
 
         Parameters
         ----------
-        ndim: 1, 2, or 3 (keyword-only)
+        ndim: 0, 1, 2, or 3 (keyword-only)
           The desired number of dimensions of the result
 
         Raises
@@ -377,26 +390,35 @@ class Field(Generic[F]):
 
         .. versionadded: 0.20.0
         """
+        if ndim not in {0, 1, 2, 3}:
+            raise ValueError(f"Expected ndim to be either 0, 1, 2 or 3. Got {ndim=}")
         if (eff_ndim := self.effective_ndim) > ndim:
             raise TypeError(f"Effective ndim {eff_ndim} is greater than target {ndim}")
-        if eff_ndim != ndim == 2:
-            # not clear how this *should* work: we'd be left with one dangling dimension
-            # whose position could be ambiguous. Better to error out if this isn't needed.
-            assert eff_ndim == 1
-            raise TypeError("Cannot produce a 2d view from effective ndim 1")
-
+        if eff_ndim < ndim < 3:
+            # not clear how this *should* work: we'd be left with one or more dangling
+            # dimensions whose positions could be ambiguous.
+            # Better to error out if this isn't needed.
+            raise TypeError(
+                f"Cannot produce a {ndim}d view from effective ndim {eff_ndim}"
+            )
         match ndim:
             case 3:
                 arr = self.data.view()
-            case 1 | 2:
-                arr = self.data.squeeze()
             case _:
-                raise ValueError(f"Expected ndim to be either 1, 2 or 3. Got {ndim=}")
+                arr = self.data.squeeze()
 
         if arr.ndim != ndim:
             raise AssertionError
 
         return arr
+
+    def as_0dview(self) -> FArray0D[F]:
+        """
+        Shorthand for as_ndview(ndim=0)
+
+        .. versionadded: 0.20.0
+        """
+        return self.as_ndview(ndim=0)
 
     def as_1dview(self) -> FArray1D[F]:
         """
