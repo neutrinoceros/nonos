@@ -42,6 +42,6 @@ def bracketing_values(arr: FArray1D[F], v: float, /) -> Interval:
     else:
         v2 = closest_value(ma, v)
         return Interval(
-            lo=float(min(v1, v2)),
-            hi=float(max(v1, v2)),
+            lo=min(v1, v2),
+            hi=max(v1, v2),
         )
