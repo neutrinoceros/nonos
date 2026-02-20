@@ -99,6 +99,7 @@ def test_field_mismatch_dtypes(stub_field, newtype, ctx):
         ((1, 1, 5), 1),
         ((1, 3, 1), 1),
         ((2, 1, 1), 1),
+        ((1, 1, 1), 0),
     ],
 )
 def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
@@ -114,9 +115,7 @@ def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
             x3=np.linspace(0, 1, shape[2] + 1),
         ),
     )
-    allowed_dims = [d for d in (1, 2, 3) if d >= effective_ndim]
-    if effective_ndim == 1:
-        allowed_dims.remove(2)
+    allowed_dims = sorted({effective_ndim, 3})
     for ndim in allowed_dims:
         method_name = f"as_{ndim}dview"
         assert hasattr(field, method_name)
@@ -129,12 +128,14 @@ def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
             assert not v1.flags.writeable
             assert not v2.flags.writeable
 
-    forbidden_dims = sorted({1, 2, 3}.difference(allowed_dims))
+    forbidden_dims = sorted({0, 1, 2, 3}.difference(allowed_dims))
     for ndim in forbidden_dims:
         method_name = f"as_{ndim}dview"
         assert hasattr(field, method_name)
-        if effective_ndim == 1 and ndim == 2:
-            msg = r"^Cannot produce a 2d view from effective ndim 1$"
+        if effective_ndim < ndim < 3:
+            msg = (
+                rf"^Cannot produce a {ndim}d view from effective ndim {effective_ndim}$"
+            )
         else:
             msg = rf"^Effective ndim {effective_ndim} is greater than target {ndim}$"
         subctx = pytest.raises(TypeError, match=msg)
@@ -149,7 +150,7 @@ def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
         subtests.test(ndim=4),
         pytest.raises(
             ValueError,
-            match=r"^Expected ndim to be either 1, 2 or 3\. Got ndim=4$",
+            match=r"^Expected ndim to be either 0, 1, 2 or 3\. Got ndim=4$",
         ),
     ):
         field.as_ndview(ndim=4)
