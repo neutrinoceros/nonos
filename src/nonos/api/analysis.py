@@ -997,7 +997,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1039,7 +1039,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1099,7 +1099,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1158,7 +1158,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1254,7 +1254,7 @@ class Field(Generic[F]):
             self.data[irmin : irmax + 1, :, :], axis=0, dtype="float64"
         ).reshape(1, self.shape[1], self.shape[2])
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
             operation=operation,
         )
@@ -1311,7 +1311,7 @@ class Field(Generic[F]):
             ret_data = self.data
 
         return self.replace(
-            data=ret_data.astype("float32", copy=False),
+            data=ret_data.astype(self.dtype, copy=False),
             operation=operation,
         )
 
