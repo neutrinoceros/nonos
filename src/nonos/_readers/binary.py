@@ -658,10 +658,11 @@ class FargoADSGReader:
 
 
 class NPYReader:
-    # we accept a leading '_' for backward compatibility
+    # we accept up to 2 dangling '_' for backward compatibility
+    # the resulting regexp is possibly *slightly* more forgiving than necessary,
+    # though a stricter, more correct version would be barely maintainable
     _filename_re = re.compile(
-        r"^_?(?P<prefix>[\w\.]*)"
-        r"_(?P<field_name>[A-Z\d]+)"
+        r"^_{0,2}(?P<full_name>[\w\d\.]+)"
         r"\.(?P<snapshot_uid>\d+)"
         r"\.npy$"
     )
@@ -677,7 +678,9 @@ class NPYReader:
         if isinstance(file_or_uid, int):
             snapshot_uid = file_or_uid
             all_bin_files = NPYReader.get_bin_files(directory / "any")
-            _filter_re = re.compile(rf"^_?{prefix}_[A-Z\d]+.{snapshot_uid:04d}.npy")
+            _filter_re = re.compile(
+                rf"_{{0,2}}{prefix}{'_' if prefix else ''}[A-Z\d]+.{snapshot_uid:04d}.npy"
+            )
             matches = [
                 file for file in all_bin_files if _filter_re.fullmatch(file.name)
             ]
@@ -694,7 +697,8 @@ class NPYReader:
             if (match := NPYReader._filename_re.fullmatch(file.name)) is None:
                 raise ValueError(f"Filename {file.name!r} is not recognized")
             if file == Path(file.name):
-                file = directory / match.group("field_name").lower() / file
+                _prefix, _, field_name = match.group("full_name").rpartition("_")
+                file = directory / field_name.lower() / file
             snapshot_uid = int(match.group("snapshot_uid"))
             file_alt = None
 
@@ -737,10 +741,10 @@ class NPYReader:
         if (match := NPYReader._filename_re.fullmatch(ref_file.name)) is None:
             raise ValueError(f"Filename {ref_file.name!r} is not recognized")
 
-        prefix = match.group("prefix")
+        ref_prefix, _, field_name = match.group("full_name").rpartition("_")
         snapshot_uid = int(match.group("snapshot_uid"))
 
-        op_suffix = f"_{prefix}" if prefix else ""
+        op_suffix = f"{'_' if ref_prefix else ''}{ref_prefix}"
         header = ref_file.parents[1] / "header" / f"header{op_suffix}.json"
         with open(header) as fh:
             header_data = json.load(fh)
@@ -759,11 +763,12 @@ class NPYReader:
             match = NPYReader._filename_re.fullmatch(file.name)
             if match is None:
                 raise AssertionError
-            if match.group("prefix") != prefix:
+            prefix, _, field_name = match.group("full_name").rpartition("_")
+            if prefix != ref_prefix:
                 continue
             if int(match.group("snapshot_uid")) != snapshot_uid:
                 continue
-            fields_found[match.group("field_name")] = file
+            fields_found[field_name] = file
 
         # sanity check: we should have rediscovered our starting file by now
         assert ref_file in fields_found.values()

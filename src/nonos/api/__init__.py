@@ -12,10 +12,9 @@ __all__ = [
     "find_around",  # deprecated
     "find_nearest",  # deprecated
     "from_data",
-    "from_file",
 ]
 from .analysis import Field, GasDataSet, GasField, Plotable
-from .satellite import NonosLick, compute, file_analysis, from_data, from_file
+from .satellite import NonosLick, compute, file_analysis, from_data
 from .tools import (
     bracketing_values,
     closest_index,
