@@ -5,6 +5,7 @@ __all__ = [
 import os
 import sys
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, final
 
@@ -304,8 +305,11 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
         else:
             return True
 
-    candidates = [ini for ini in directory.glob("*.ini") if is_valid(ini)]
-    candidates.extend(directory.glob("*.par"))
+    candidates = [
+        ini
+        for ini in chain(directory.glob("*.ini"), directory.glob("*.par"))
+        if is_valid(ini)
+    ]
     if len(candidates) == 1:
         return candidates[0]
     elif not candidates:
