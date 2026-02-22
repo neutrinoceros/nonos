@@ -1,5 +1,4 @@
 import re
-import sys
 from itertools import chain, permutations
 
 import numpy as np
@@ -11,9 +10,6 @@ from nonos._integrity_checks import (
     collect_shape_exceptions,
     compile_exceptions,
 )
-
-if sys.version_info < (3, 11):
-    pass
 
 
 @pytest.mark.parametrize(
