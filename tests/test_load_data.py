@@ -1,10 +1,44 @@
 import os
 import shutil
+from dataclasses import asdict, is_dataclass
 
 import numpy as np
+import numpy.testing as npt
 import pytest
 
-from nonos.api import GasDataSet
+from nonos.api import Field, GasDataSet
+
+
+def assert_obj_equal(o1, o2):
+    assert type(o2) is type(o1)
+    if is_dataclass(o1):
+        return assert_obj_equal(asdict(o1), asdict(o2))
+    for (k1, v1), (k2, v2) in zip(o1.items(), o2.items(), strict=True):
+        assert k2 == k1
+        match v1:
+            case dict():
+                return assert_obj_equal(v2, v1)
+            case np.ndarray():
+                npt.assert_array_equal(v2, v1)
+            case _:
+                assert v2 == v1
+
+
+def test_field_roundtrip(test_data_dir, subtests, tmp_path):
+    ds = GasDataSet(500, directory=test_data_dir / "idefix_spherical_planet3d")
+    f0 = ds["RHO"]
+    f1 = f0.azimuthal_average()
+    for f, label in [(f0, "raw-field"), (f1, "op")]:
+        with subtests.test(f"{label}-save"):
+            f.save(tmp_path)
+            full_name = f"{f.operation}{'_' if f.operation else ''}{f.name}"
+            expected_file = (
+                tmp_path / f.name.lower() / f"{full_name}.{f.snapshot_number:04d}.npy"
+            )
+            assert expected_file.is_file()
+            with subtests.test("reload"):
+                fnew = Field.reload(expected_file)
+                assert_obj_equal(fnew, f)
 
 
 def test_from_npy_error(test_data_dir):

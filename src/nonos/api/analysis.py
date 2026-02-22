@@ -15,6 +15,7 @@ from typing import (
     Generic,
     Literal,
     cast,
+    final,
     overload,
 )
 
@@ -248,6 +249,7 @@ class FieldAttrs(Generic[F], TypedDict, total=False):
     rotate_by: float
 
 
+@final
 @dataclass(slots=True, frozen=True, kw_only=True)
 class Field(Generic[F]):
     name: str
@@ -585,21 +587,20 @@ class Field(Generic[F]):
         else:
             directory = Path(directory)
         operation = self.operation
-        headerdir = directory / "header"
+        header_dir = directory / "header"
         subdir = directory / self.name.lower()
-        file = subdir / f"{operation}_{self.name}.{self.snapshot_uid:04d}.npy"
-        if not header_only:
-            if not file.is_file():
-                subdir.mkdir(exist_ok=True, parents=True)
-                with open(file, "wb") as fh:
-                    np.save(fh, self.data)
+        full_name = f"{operation}{'_' if operation else ''}{self.name}"
+        file = subdir / f"{full_name}.{self.snapshot_uid:04d}.npy"
+        if not (header_only or file.is_file()):
+            subdir.mkdir(exist_ok=True, parents=True)
+            np.save(file, self.data)
 
         group_of_files = list(subdir.glob(f"{operation}*"))
-        op_suffix = f"_{operation}" if operation != "" else ""
+        op_suffix = f"{'_' if operation else ''}{operation}"
         filename = f"header{op_suffix}.json"
-        header_file = headerdir / filename
+        header_file = header_dir / filename
         if (len(group_of_files) > 0 and not header_file.is_file()) or header_only:
-            headerdir.mkdir(exist_ok=True, parents=True)
+            header_dir.mkdir(exist_ok=True, parents=True)
             if not header_file.is_file():
                 dictsaved = self.coordinates.to_dict()
 
@@ -618,6 +619,47 @@ class Field(Generic[F]):
             copyfile(src, dest)
 
         return file
+
+    @classmethod
+    def reload(
+        cls,
+        path: str | os.PathLike[str],
+        /,
+    ) -> "Field[Any]":
+        """
+        Deserialize a Field object previously saved on disk via Field.save
+
+        .. versionadded: 0.20.0
+        """
+        path = Path(path).resolve()
+
+        if (match := NPYReader._filename_re.match(path.name)) is None:
+            raise ValueError(f"failed to parse file name {path.name!r}")
+        op, _, name = match.group("full_name").rpartition("_")
+        data = np.load(path, allow_pickle=True)
+
+        header_dir = path.parents[1] / "header"
+        coords_file = header_dir / f"header{'_' if op else ''}{op}.json"
+
+        with coords_file.open("r") as fd:
+            coords_dict = json.load(fd)
+
+        geometry, x1, x2, x3 = coords_dict.values()
+        coords = Coordinates(
+            geometry=geometry,
+            x1=np.array(x1, dtype=data.dtype),
+            x2=np.array(x2, dtype=data.dtype),
+            x3=np.array(x3, dtype=data.dtype),
+        )
+        return cls(
+            name=name,
+            data=data,
+            coordinates=coords,
+            native_geometry=coords.geometry,  # bof
+            snapshot_uid=int(match.group("snapshot_uid")),
+            loader=Loader.resolve(directory=path.parent),
+            operation=op,
+        )
 
     def find_ir(self, distance: float = 1.0) -> int:
         match self.native_geometry:
@@ -1342,7 +1384,7 @@ class Field(Generic[F]):
         )
 
 
-class GasField(Field[F]):
+class GasField:
     @deprecated(
         "nonos.api.analysis.GasField is deprecated since v0.20.0 "
         "and might be removed in a future version. "

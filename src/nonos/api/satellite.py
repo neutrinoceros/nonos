@@ -3,7 +3,7 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias
+from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
 
 import numpy as np
 from packaging.version import Version
@@ -241,39 +241,5 @@ def from_data(
         native_geometry=coords.geometry,
         snapshot_uid=on,
         loader=Loader.resolve(code=code, parameter_file=inifile, directory=directory),
-        operation=operation,
-    )
-
-
-def from_file(
-    *,
-    field: str,
-    operation: str,
-    on: int,
-    directory: os.PathLike[str] | None = None,
-) -> Field[Any]:
-    if directory is None:
-        directory = Path.cwd()
-    else:
-        directory = Path(directory)
-    repout = field.lower()
-    headername = directory / "header" / f"header_{operation}.npy"
-    with open(headername, "rb") as file:
-        dict_coords = np.load(file, allow_pickle=True).item()
-
-    geometry, coord0, coord1, coord2 = dict_coords.values()
-    ret_coords = Coordinates(geometry, coord0, coord1, coord2)
-
-    fileout = directory / repout / f"_{operation}_{field}.{on:04d}.npy"
-    with open(fileout, "rb") as file:
-        ret_data = np.load(file, allow_pickle=True)
-
-    return Field(
-        name=field,
-        data=ret_data,
-        coordinates=ret_coords,
-        native_geometry=geometry,
-        snapshot_uid=on,
-        loader=Loader.resolve(directory=directory),
         operation=operation,
     )
