@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, final
 
+import inifix
 import numpy as np
 
 import nonos._readers as readers
@@ -294,12 +295,29 @@ def _parameter_file_from(
 
 def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
     directory = Path(directory).resolve()
-    candidates = list(directory.glob("*.ini"))
-    candidates.extend(list(directory.glob("*.par")))
+
+    def is_valid(ini: Path) -> bool:
+        try:
+            inifix.load(ini)
+        except (TypeError, ValueError):
+            return False
+        else:
+            return True
+
+    candidates = [ini for ini in directory.glob("*.ini") if is_valid(ini)]
+    candidates.extend(directory.glob("*.par"))
     if len(candidates) == 1:
         return candidates[0]
     elif not candidates:
-        raise FileNotFoundError(f"Could not find a parameter file in {directory}")
+        if directory != Path(directory.anchor):
+            try:
+                return _parameter_file_from_dir(directory.parent)
+            except FileNotFoundError:
+                # if recursion fails, we want to raise close to the original caller
+                pass
+        raise FileNotFoundError(
+            f"Could not find a parameter file in {directory} or its parents."
+        )
     else:
         raise RuntimeError(
             f"Found multiple parameter files in {directory}\n - "

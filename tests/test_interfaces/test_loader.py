@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -141,11 +142,28 @@ class TestGetRecipe:
         assert Readers.resolve(directory=test_data_dir / in_) is expected
 
     def test_ambiguous_directory(self, tmp_path):
-        tmp_path.joinpath("idefix.ini").touch()
-        tmp_path.joinpath("pluto.ini").touch()
+        tmp_path.joinpath("idefix.ini").write_text("[Grid]\n")
+        tmp_path.joinpath("pluto.ini").write_text("[Grid]\n")
         with pytest.raises(
             RuntimeError,
             match=r"^Found multiple parameter files",
+        ):
+            Readers.resolve(directory=tmp_path)
+
+    def test_inifix_invalid(self, tmp_path):
+        # traditional inifile using '=' are not supported, but common
+        # in the wild (most notably on windows). They need to be ignored
+        # for upwards directory traversal to stay reasonably robust.
+        tmp_path.joinpath("desktop.ini").write_text("[example]\nvar='test'")
+        with pytest.raises(
+            FileNotFoundError,
+            match=(
+                "^"
+                + re.escape(
+                    f"Could not find a parameter file in {tmp_path} or its parents."
+                )
+                + "$"
+            ),
         ):
             Readers.resolve(directory=tmp_path)
 
