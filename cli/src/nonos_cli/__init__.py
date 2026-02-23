@@ -144,7 +144,7 @@ def process_field(
 
     logger.debug("operations performed: {}", operations)
 
-    dim = 3 - dsop.shape.count(1)
+    dim = dsop.effective_ndim
     logger.debug("plotting a {}D plot.", dim)
 
     if plane is None:
