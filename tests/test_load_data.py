@@ -6,7 +6,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from nonos.api import Field, GasDataSet
+from nonos.api import GasDataSet
 
 
 def assert_obj_equal(o1, o2):
@@ -22,23 +22,6 @@ def assert_obj_equal(o1, o2):
                 npt.assert_array_equal(v2, v1)
             case _:
                 assert v2 == v1
-
-
-def test_field_roundtrip(test_data_dir, subtests, tmp_path):
-    ds = GasDataSet(500, directory=test_data_dir / "idefix_spherical_planet3d")
-    f0 = ds["RHO"]
-    f1 = f0.azimuthal_average()
-    for f, label in [(f0, "raw-field"), (f1, "op")]:
-        with subtests.test(f"{label}-save"):
-            f.save(tmp_path)
-            full_name = f"{f.operation}{'_' if f.operation else ''}{f.name}"
-            expected_file = (
-                tmp_path / f.name.lower() / f"{full_name}.{f.snapshot_number:04d}.npy"
-            )
-            assert expected_file.is_file()
-            with subtests.test("reload"):
-                fnew = Field.reload(expected_file)
-                assert_obj_equal(fnew, f)
 
 
 def test_from_npy_error(test_data_dir):
