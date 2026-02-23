@@ -158,11 +158,7 @@ class TestGetRecipe:
         with pytest.raises(
             FileNotFoundError,
             match=(
-                "^"
-                + re.escape(
-                    f"Could not find a parameter file in {tmp_path} or its parents."
-                )
-                + "$"
+                "^" + re.escape(f"Could not find a parameter file in {tmp_path}") + "$"
             ),
         ):
             Readers.resolve(directory=tmp_path)

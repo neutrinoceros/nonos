@@ -620,47 +620,6 @@ class Field(Generic[F]):
 
         return file
 
-    @classmethod
-    def reload(
-        cls,
-        path: str | os.PathLike[str],
-        /,
-    ) -> "Field[Any]":
-        """
-        Deserialize a Field object previously saved on disk via Field.save
-
-        .. versionadded: 0.20.0
-        """
-        path = Path(path).resolve()
-
-        if (match := NPYReader._filename_re.match(path.name)) is None:
-            raise ValueError(f"failed to parse file name {path.name!r}")
-        op, _, name = match.group("full_name").rpartition("_")
-        data = np.load(path, allow_pickle=True)
-
-        header_dir = path.parents[1] / "header"
-        coords_file = header_dir / f"header{'_' if op else ''}{op}.json"
-
-        with coords_file.open("r") as fd:
-            coords_dict = json.load(fd)
-
-        geometry, x1, x2, x3 = coords_dict.values()
-        coords = Coordinates(
-            geometry=geometry,
-            x1=np.array(x1, dtype=data.dtype),
-            x2=np.array(x2, dtype=data.dtype),
-            x3=np.array(x3, dtype=data.dtype),
-        )
-        return cls(
-            name=name,
-            data=data,
-            coordinates=coords,
-            native_geometry=coords.geometry,  # bof
-            snapshot_uid=int(match.group("snapshot_uid")),
-            loader=Loader.resolve(directory=path.parent),
-            operation=op,
-        )
-
     def find_ir(self, distance: float = 1.0) -> int:
         match self.native_geometry:
             case Geometry.POLAR:

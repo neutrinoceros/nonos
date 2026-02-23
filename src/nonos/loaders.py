@@ -313,15 +313,7 @@ def _parameter_file_from_dir(directory: os.PathLike[str], /) -> Path:
     if len(candidates) == 1:
         return candidates[0]
     elif not candidates:
-        if directory != Path(directory.anchor):
-            try:
-                return _parameter_file_from_dir(directory.parent)
-            except FileNotFoundError:
-                # if recursion fails, we want to raise close to the original caller
-                pass
-        raise FileNotFoundError(
-            f"Could not find a parameter file in {directory} or its parents."
-        )
+        raise FileNotFoundError(f"Could not find a parameter file in {directory}")
     else:
         raise RuntimeError(
             f"Found multiple parameter files in {directory}\n - "
