@@ -5,7 +5,7 @@ import pytest
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
-from nonos.api import GasDataSet, closest_index, compute, from_data
+from nonos.api import GasDataSet, compute, from_data
 
 
 def test_plot_planet_corotation(test_data_dir):
@@ -13,11 +13,11 @@ def test_plot_planet_corotation(test_data_dir):
 
     ds = GasDataSet(43, geometry="polar")
     field = ds["RHO"].radial_at_r().vertical_at_midplane()
-    azimfield = field.map("phi").data
-    assert closest_index(azimfield, azimfield.max()) != 0
+    az = field.map("phi").data
+    assert az.argmax() != 0
 
-    azimfieldPlanet = field.map("phi", rotate_with="planet0.dat").data
-    assert closest_index(azimfieldPlanet, azimfieldPlanet.max()) == 0
+    az_corr = field.map("phi", rotate_with="planet0.dat").data
+    assert az_corr.argmax() == 0
 
 
 def test_unit_conversion(test_data_dir):
