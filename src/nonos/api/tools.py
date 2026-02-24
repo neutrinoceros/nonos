@@ -88,4 +88,4 @@ def find_nearest(array: FArray1D[F], value: float) -> int:  # pragma: no cover
     "Use nonos.api.tools.bracketing_values instead."
 )
 def find_around(array: FArray1D[F], value: float) -> FArray1D[F]:  # pragma: no cover
-    return np.array(bracketing_values(array, value))
+    return bracketing_values(array, value).as_array(dtype=array.dtype)
