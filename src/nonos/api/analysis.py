@@ -242,7 +242,6 @@ class FieldAttrs(Generic[F], TypedDict, total=False):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
-    native_geometry: Geometry
     snapshot_uid: int
     loader: Loader[F]
     operation: str
@@ -255,7 +254,6 @@ class Field(Generic[F]):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
-    native_geometry: Geometry
     snapshot_uid: int
     loader: Loader[F]
     operation: str = ""
@@ -287,6 +285,10 @@ class Field(Generic[F]):
     @property
     def snapshot_number(self) -> int:  # pragma: no cover
         return self.snapshot_uid
+
+    @property
+    def geometry(self) -> Geometry:
+        return self.coordinates.geometry
 
     @property
     @deprecated(
@@ -500,14 +502,14 @@ class Field(Generic[F]):
                     ipi = closest_index(phicoord, 2 * np.pi)
                 else:
                     ipi = closest_index(phicoord, 0)
-                match self.native_geometry:
+                match self.geometry:
                     case Geometry.POLAR:
                         data_view = np.roll(self.data, -ipi + 1, axis=1)
                     case Geometry.SPHERICAL:
                         data_view = np.roll(self.data, -ipi + 1, axis=2)
                     case _:
                         raise NotImplementedError(
-                            f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                            f"geometry flag '{self.geometry}' not implemented yet if corotation"
                         )
             else:
                 data_view = self.data.view()
@@ -540,14 +542,14 @@ class Field(Generic[F]):
                     ipi = closest_index(phicoord, 2 * np.pi)
                 else:
                     ipi = closest_index(phicoord, 0)
-                match self.native_geometry:
+                match self.geometry:
                     case Geometry.POLAR:
                         data_view = np.roll(self.data, -ipi + 1, axis=1)
                     case Geometry.SPHERICAL:
                         data_view = np.roll(self.data, -ipi + 1, axis=2)
                     case _:
                         raise NotImplementedError(
-                            f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                            f"geometry flag '{self.geometry}' not implemented yet if corotation"
                         )
             else:
                 data_view = self.data.view()
@@ -562,7 +564,7 @@ class Field(Generic[F]):
             # while preserving the original (cyclic) order in the other two axes
             data_view = rotate_axes(data_view, shift=self.shape.index(1)).squeeze()
 
-            naxes = axes_from_geometry(self.native_geometry)
+            naxes = axes_from_geometry(self.geometry)
             sorted_pairs = [
                 (naxes[0], naxes[1]),
                 (naxes[1], naxes[2]),
@@ -621,7 +623,7 @@ class Field(Generic[F]):
         return file
 
     def find_ir(self, distance: float = 1.0) -> int:
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.POLAR:
                 return closest_index(
                     self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS),
@@ -638,7 +640,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
     def find_imid(self, altitude: float = 0.0) -> int:
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN | Geometry.POLAR:
                 arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
                 return closest_index(arr, altitude)
@@ -649,7 +651,7 @@ class Field(Generic[F]):
                 assert_never(unreachable)
 
     def find_iphi(self, phi: float = 0) -> int:
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.POLAR | Geometry.SPHERICAL:
                 phiarr = self.coordinates.get_axis_array(Axis.AZIMUTH)
                 mod = len(phiarr) - 1
@@ -742,14 +744,14 @@ class Field(Generic[F]):
         )
 
         imid = self.find_imid()
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
                     "latitudinal_projection isn't implemented for cartesian geometry"
                 )
             case Geometry.POLAR:
                 ret_coords = Coordinates(
-                    self.native_geometry,
+                    self.geometry,
                     self.coordinates.get_axis_array("R"),
                     self.coordinates.get_axis_array("phi"),
                     bracketing_values(
@@ -773,7 +775,7 @@ class Field(Generic[F]):
                 ret_data = integral.reshape(self.shape[0], self.shape[1], 1)
             case Geometry.SPHERICAL:
                 ret_coords = Coordinates(
-                    self.native_geometry,
+                    self.geometry,
                     self.coordinates.get_axis_array("r"),
                     bracketing_values(
                         self.coordinates.get_axis_array("theta"),
@@ -835,7 +837,7 @@ class Field(Generic[F]):
         )
 
         imid = self.find_imid()
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
@@ -897,7 +899,7 @@ class Field(Generic[F]):
             operation_name=operation_name,
         )
         imid = self.find_imid()
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
                 ret_coords = self.coordinates.project_along(
@@ -945,7 +947,7 @@ class Field(Generic[F]):
         )
 
         imid = self.find_imid(altitude=theta)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
                     "latitudinal_at_theta is not implemented for cartesian geometry"
@@ -999,7 +1001,7 @@ class Field(Generic[F]):
             operation_name=operation_name,
         )
         imid = self.find_imid(altitude=z)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
                 ret_coords = self.coordinates.project_along(
@@ -1041,10 +1043,10 @@ class Field(Generic[F]):
             operation_name=operation_name,
         )
         iphi = self.find_iphi(phi=phi)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_at_phi"
+                    f"geometry flag '{self.geometry}' not implemented yet for azimuthal_at_phi"
                 )
             case Geometry.POLAR:
                 phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
@@ -1101,10 +1103,10 @@ class Field(Generic[F]):
         )
 
         iphi = self.find_iphi(phi=0)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average"
+                    f"geometry flag '{self.geometry}' not implemented yet for azimuthal_average"
                 )
             case Geometry.POLAR:
                 phimed = self.coordinates.get_axis_array_med(Axis.AZIMUTH)
@@ -1154,10 +1156,10 @@ class Field(Generic[F]):
         rhill = self.find_rhill(planet_file=planet_file)
         iphip_m = self.find_iphi(phi=phip - 2 * rhill / rp)
         iphip_p = self.find_iphi(phi=phip + 2 * rhill / rp)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet for azimuthal_average_except_planet_hill"
+                    f"geometry flag '{self.geometry}' not implemented yet for azimuthal_average_except_planet_hill"
                 )
             case Geometry.POLAR:
                 ret_coords = self.coordinates
@@ -1203,10 +1205,10 @@ class Field(Generic[F]):
         )
 
         ir1 = self.find_ir(distance=distance)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
+                    f"geometry flag '{self.geometry}' not implemented yet for radial_at_r"
                 )
             case Geometry.POLAR:
                 rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
@@ -1249,10 +1251,10 @@ class Field(Generic[F]):
         irmin = self.find_ir(distance=vmin)
         irmax = self.find_ir(distance=vmax)
         ir = self.find_ir(distance=(vmax - vmin) / 2)
-        match self.native_geometry:
+        match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
-                    f"geometry flag '{self.native_geometry}' not implemented yet for radial_at_r"
+                    f"geometry flag '{self.geometry}' not implemented yet for radial_at_r"
                 )
             case Geometry.POLAR:
                 R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
@@ -1289,7 +1291,7 @@ class Field(Generic[F]):
     def diff(self, on_2: int) -> "Field[F]":
         ds_2 = GasDataSet(
             on_2,
-            geometry=self.native_geometry,
+            geometry=self.geometry,
             inifile=self.loader.parameter_file,
             directory=self.loader.parameter_file.parent,
         )
@@ -1325,14 +1327,14 @@ class Field(Generic[F]):
                 ipi = closest_index(phicoord, 2 * np.pi)
             else:
                 ipi = closest_index(phicoord, 0)
-            match self.native_geometry:
+            match self.geometry:
                 case Geometry.POLAR:
                     ret_data = np.roll(self.data, -ipi + 1, axis=1)
                 case Geometry.SPHERICAL:
                     ret_data = np.roll(self.data, -ipi + 1, axis=2)
                 case _:
                     raise NotImplementedError(
-                        f"geometry flag '{self.native_geometry}' not implemented yet if corotation"
+                        f"geometry flag '{self.geometry}' not implemented yet if corotation"
                     )
         else:
             ret_data = self.data
@@ -1371,11 +1373,12 @@ class GasField:
             parameter_file=inifile,
             directory=Path.cwd() if directory is None else Path(directory),
         )
+        if ngeom != coords.geometry:
+            raise ValueError
         return Field(
             name=field,
             data=data,
             coordinates=coords,
-            native_geometry=Geometry(ngeom),
             snapshot_uid=on,
             operation=operation,
             loader=loader,
@@ -1496,7 +1499,6 @@ class GasDataSet(Generic[D, F]):
                 name=key,
                 data=array,
                 coordinates=self.coordinates,
-                native_geometry=self.native_geometry,
                 snapshot_uid=self.snapshot_uid,
                 loader=self._loader,
             )

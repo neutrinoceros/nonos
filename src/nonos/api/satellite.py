@@ -238,7 +238,6 @@ def from_data(
         name=field,
         data=data,
         coordinates=coords,
-        native_geometry=coords.geometry,
         snapshot_uid=on,
         loader=Loader.resolve(code=code, parameter_file=inifile, directory=directory),
         operation=operation,
