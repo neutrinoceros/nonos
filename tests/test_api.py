@@ -41,7 +41,6 @@ def stub_field(test_data_dir):
             x2=np.linspace(0, 1, 4),
             x3=np.linspace(0, 1, 6),
         ),
-        native_geometry=Geometry.CARTESIAN,
         snapshot_uid=0,
         loader=Loader.resolve(
             directory=test_data_dir / "idefix_planet3d",

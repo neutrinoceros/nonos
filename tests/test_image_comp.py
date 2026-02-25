@@ -137,7 +137,6 @@ def test_nonoslick_method(method, tmp_path):
             name=name,
             data=arr,
             coordinates=fake_coords,
-            native_geometry=fake_coords.geometry,
             snapshot_uid=0,
             loader=loader,
         )
