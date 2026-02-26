@@ -1,3 +1,4 @@
+import operator
 import os
 from math import prod
 
@@ -14,7 +15,7 @@ from nonos.api import Field, GasDataSet, file_analysis
 def stub_field():
     return Field(
         name="test",
-        data=np.arange(30, dtype="float64").reshape(2, 3, 5),
+        data=np.arange(1, 31, dtype="float64").reshape(2, 3, 5),
         coordinates=Coordinates(
             geometry=Geometry.CARTESIAN,
             x1=np.linspace(0, 1, 3),
@@ -129,6 +130,39 @@ def test_field_ndviews(stub_field, shape, effective_ndim, subtests):
         ),
     ):
         field.as_ndview(ndim=4)
+
+
+@pytest.mark.parametrize(
+    "op", [operator.add, operator.sub, operator.mul, operator.truediv]
+)
+@pytest.mark.parametrize(
+    "operand",
+    ["COPY", 2, 3.0, np.float32(4), np.float64(5), 1.0 + 0j, np.complex128(2.0 + 0.0j)],
+)
+def test_field_arithemtic(stub_field, op, operand):
+    if operand == "COPY":
+        # a shallow copy
+        operand = stub_field.replace()
+
+    if isinstance(operand, complex):
+        with pytest.raises(TypeError):
+            op(stub_field, operand)
+        with pytest.raises(TypeError):
+            op(operand, stub_field)
+        return
+
+    res1 = op(stub_field, operand)
+    res2 = op(operand, stub_field)
+    assert res1.dtype == stub_field.dtype
+    assert res2.dtype == stub_field.dtype
+
+    match operand:
+        case Field():
+            true_operand = operand.data
+        case _:
+            true_operand = operand
+    npt.assert_array_equal(res1.as_3dview(), op(stub_field.data, true_operand))
+    npt.assert_array_equal(res2.as_3dview(), op(true_operand, stub_field.data))
 
 
 class TestFileAnalysis:
