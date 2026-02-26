@@ -242,10 +242,6 @@ class FieldAttrs(Generic[F], TypedDict, total=False):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
-    snapshot_uid: int
-    loader: Loader[F]
-    operation: str
-    rotate_by: float
 
 
 @final
@@ -254,10 +250,6 @@ class Field(Generic[F]):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
-    snapshot_uid: int
-    loader: Loader[F]
-    operation: str = ""
-    rotate_by: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "data", self.data.view())
@@ -283,69 +275,20 @@ class Field(Generic[F]):
             raise excs
 
     @property
-    def snapshot_number(self) -> int:  # pragma: no cover
-        return self.snapshot_uid
-
-    @property
-    def geometry(self) -> Geometry:
+    def geometry(self) -> Geometry:  # pragma: no cover
         return self.coordinates.geometry
 
-    @property
-    @deprecated(
-        "(Gas)Field.field is deprecated since v0.20.0, "
-        "and may be removed in a future version. "
-        "Use Field.name instead"
-    )
-    def field(self) -> str:  # pragma: no cover
-        return self.name
-
-    @property
-    @deprecated(
-        "Field.inifile  is deprecated since v0.20.0, "
-        "and may be removed in a future version. "
-        "Use Field.loader.parameter_file instead"
-    )
-    def inifile(self) -> Path:  # pragma: no cover
-        return self.loader.parameter_file
-
-    @property
-    @deprecated(
-        "(Gas)Field.coords is deprecated since v0.20.0, "
-        "and may be removed in a future version. "
-        "Use Field.coordinates instead"
-    )
-    def coords(self) -> Coordinates[F]:
-        return self.coordinates
-
-    @property
-    @deprecated(
-        "(Gas)Field.on is deprecated since v0.20.0, "
-        "and may be removed in a future version. "
-        "Use Field.snapshot_uid instead"
-    )
-    def on(self) -> int:  # pragma: no cover
-        return self.snapshot_uid
-
-    @property
-    @deprecated(
-        "(Gas)Field.directory is deprecated since v0.20.0, "
-        "and may be removed in a future version. "
-        "Use Field.loader.parameter_file.parent instead"
-    )
-    def directory(self) -> Path:  # pragma: no cover
-        return self.loader.parameter_file.parent
-
-    def replace(self, **substitutions: Unpack[FieldAttrs[F]]) -> "Field[F]":
+    def replace(self, **subs: Unpack[FieldAttrs[F]]) -> "Field[F]":
         """Convenience wrapper around copy.replace"""
         if sys.version_info >= (3, 13):
             from copy import replace
         else:
             from dataclasses import replace
-        return replace(self, **substitutions)
+        return replace(self, **subs)
 
     @property
-    def dtype(self) -> np.dtype[F]:
-        return self.loader.components.dtype
+    def dtype(self) -> np.dtype[F]:  # pragma: no cover
+        return self.coordinates.dtype
 
     @property
     def shape(self) -> tuple[int, int, int]:
@@ -448,6 +391,226 @@ class Field(Generic[F]):
         """
         return self.as_ndview(ndim=3)
 
+
+class GasFieldReplaceKwargs(Generic[F], TypedDict, total=False):
+    name: str
+    data: FArray3D[F]
+    coordinates: Coordinates[F]
+    snapshot_uid: int
+    operation: str
+    rotate_by: float
+
+
+@final
+class GasField(Generic[F]):
+    def __init__(
+        self,
+        field: str,
+        data: FArray3D[F],
+        coords: Coordinates[F],
+        ngeom: str,
+        on: int,
+        operation: str,
+        *,
+        inifile: os.PathLike[str] | None = None,
+        code: str | None = None,
+        directory: os.PathLike[str] | None = None,
+        rotate_by: float | None = None,
+        rotate_with: str | None = None,
+    ) -> None:
+        if ngeom != coords.geometry:
+            raise ValueError
+
+        self._field: Field[F] = Field(
+            name=field,
+            data=data,
+            coordinates=coords,
+        )
+
+        self._snapshot_uid = on
+        self._operation = operation
+        self._loader = Loader.resolve(
+            code=code,
+            parameter_file=inifile,
+            directory=Path.cwd() if directory is None else Path(directory),
+        )
+        self._rotate_by = _resolve_rotate_by(
+            rotate_by=rotate_by,
+            rotate_with=rotate_with,
+            planet_azimuth_finder=partial(
+                _find_planet_azimuth,
+                loader=self._loader,
+                snapshot_uid=on,
+            ),
+        )
+
+    @property
+    def snapshot_uid(self) -> int:
+        return self._snapshot_uid
+
+    @property
+    def snapshot_number(self) -> int:
+        # supported (non-deprecated) alias
+        return self.snapshot_uid
+
+    @property
+    def directory(self) -> Path:
+        return self._loader.parameter_file.parent
+
+    @property
+    def operation(self) -> str:
+        return self._operation
+
+    # thinly wrap the underlying Field object by re-exposing its attributes
+    # as read-only properties
+    @property
+    def name(self) -> str:
+        return self._field.name
+
+    @property
+    def data(self) -> FArray3D[F]:
+        return self._field.data
+
+    @overload
+    def as_ndview(self, *, ndim: Literal[0]) -> FArray0D[F]: ...
+    @overload
+    def as_ndview(self, *, ndim: Literal[1]) -> FArray1D[F]: ...
+    @overload
+    def as_ndview(self, *, ndim: Literal[2]) -> FArray2D[F]: ...
+    @overload
+    def as_ndview(self, *, ndim: Literal[3]) -> FArray3D[F]: ...
+    def as_ndview(self, *, ndim):  # type: ignore[no-untyped-def]
+        """
+        Create a read-only view of the underlying data array with a specific number of dimensions.
+
+        Parameters
+        ----------
+        ndim: 0, 1, 2, or 3 (keyword-only)
+          The desired number of dimensions of the result
+
+        Raises
+        ------
+        TypeError: if the effective number of dimensions of the data is greater than ndim
+        ValueError: if ndim is anything other than 1, 2 or 3
+
+        .. versionadded: 0.20.0
+        """
+        return self._field.as_ndview(ndim=ndim)
+
+    def as_0dview(self) -> FArray0D[F]:
+        """
+        Shorthand for as_ndview(ndim=0)
+
+        .. versionadded: 0.20.0
+        """
+        return self.as_ndview(ndim=0)
+
+    def as_1dview(self) -> FArray1D[F]:
+        """
+        Shorthand for as_ndview(ndim=1)
+
+        .. versionadded: 0.20.0
+        """
+        return self.as_ndview(ndim=1)
+
+    def as_2dview(self) -> FArray2D[F]:
+        """
+        Shorthand for as_ndview(ndim=2)
+
+        .. versionadded: 0.20.0
+        """
+        return self.as_ndview(ndim=2)
+
+    def as_3dview(self) -> FArray3D[F]:
+        """
+        Shorthand for as_ndview(ndim=3)
+
+        .. versionadded: 0.20.0
+        """
+        return self.as_ndview(ndim=3)
+
+    @property
+    def coordinates(self) -> Coordinates[F]:
+        return self._field.coordinates
+
+    @property
+    def dtype(self) -> np.dtype[F]:
+        return self._field.dtype
+
+    @property
+    def shape(self) -> tuple[int, int, int]:
+        return self._field.shape
+
+    @property
+    def effective_ndim(self) -> Literal[0, 1, 2, 3]:
+        """
+        The effective dimensionality of the underlying data.
+        This corresponds to the number of dimensions with more than a single element.
+
+        .. versionadded: 0.20.0
+        """
+        return self._field.effective_ndim
+
+    @property
+    def geometry(self) -> Geometry:
+        return self.coordinates.geometry
+
+    def replace(self, **subs: Unpack[GasFieldReplaceKwargs[F]]) -> "GasField[F]":
+        """
+        .. versionadded: 0.20.0
+        """
+
+        new = object.__new__(GasField)
+
+        field_kws: FieldAttrs[F] = {}
+        subs_cpy = subs.copy()
+        for k in ["name", "data", "coordinates"]:
+            if k in subs_cpy:
+                field_kws[k] = subs.pop(k)  # type: ignore[literal-required, misc]
+
+        new._field = self._field.replace(**field_kws)
+        new._loader = self._loader
+        new._snapshot_uid = subs.get("snapshot_uid", self._snapshot_uid)
+        new._operation = subs.get("operation", self._operation)
+        new._rotate_by = subs.get("rotate_by", self._rotate_by)
+        return new
+
+    # legacy, deprecated aliases
+    @property
+    @deprecated(
+        "GasField.field is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasField.name instead"
+    )
+    def field(self) -> str:  # pragma: no cover
+        return self.name
+
+    @property
+    @deprecated(
+        "GasField.inifile is deprecated since v0.20.0, "
+        "and may be removed in a future version."
+    )
+    def inifile(self) -> Path:  # pragma: no cover
+        return self._loader.parameter_file
+
+    @property
+    @deprecated(
+        "GasField.coords is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasField.coordinates instead"
+    )
+    def coords(self) -> Coordinates[F]:
+        return self.coordinates
+
+    @property
+    @deprecated(
+        "GasField.on is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasField.snapshot_uid instead"
+    )
+    def on(self) -> int:  # pragma: no cover
+        return self.snapshot_uid
+
     @overload
     def map(
         self,
@@ -479,7 +642,7 @@ class Field(Generic[F]):
             rotate_with=rotate_with,
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
-                loader=self.loader,
+                loader=self._loader,
                 snapshot_uid=self.snapshot_uid,
             ),
         )
@@ -495,7 +658,7 @@ class Field(Generic[F]):
 
             abscissa_value = list(meshgrid_conversion.values())[0]
             abscissa_key = list(meshgrid_conversion.keys())[0]
-            if axis_1 is Axis.AZIMUTH and not _fequal(self.rotate_by, rotate_by):
+            if axis_1 is Axis.AZIMUTH and not _fequal(self._rotate_by, rotate_by):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 bv = bracketing_values(phicoord, 0)
                 if abs(closest_value(phicoord, 0)) > bv.span:
@@ -534,7 +697,7 @@ class Field(Generic[F]):
             abscissa_key, ordinate_key = (axis_1, axis_2)
             native_plane_axes = self.coordinates.native_from_wanted(axis_1, axis_2)
             if Axis.AZIMUTH in native_plane_axes and not _fequal(
-                self.rotate_by, rotate_by
+                self._rotate_by, rotate_by
             ):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 bv = bracketing_values(phicoord, 0)
@@ -588,7 +751,7 @@ class Field(Generic[F]):
             directory = Path.cwd()
         else:
             directory = Path(directory)
-        operation = self.operation
+        operation = self._operation
         header_dir = directory / "header"
         subdir = directory / self.name.lower()
         full_name = f"{operation}{'_' if operation else ''}{self.name}"
@@ -615,8 +778,8 @@ class Field(Generic[F]):
                 with open(header_file, "w") as hfile:
                     json.dump(dictsaved, hfile, indent=2)
 
-        src = self.loader.parameter_file
-        dest = directory / self.loader.parameter_file.name
+        src = self._loader.parameter_file
+        dest = directory / self._loader.parameter_file.name
         if dest != src:
             copyfile(src, dest)
 
@@ -670,11 +833,11 @@ class Field(Generic[F]):
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
-        file = self.loader.parameter_file.parent / planet_file
-        return self.loader.load_planet_data(file)
+        file = self._loader.parameter_file.parent / planet_file
+        return self._loader.load_planet_data(file)
 
     def _get_ind_snapshot_uid(self, time: FArray1D[F]) -> int:
-        return _get_ind_snapshot_uid(self.loader, self.snapshot_uid, time)
+        return _get_ind_snapshot_uid(self._loader, self.snapshot_uid, time)
 
     def find_rp(
         self,
@@ -692,7 +855,7 @@ class Field(Generic[F]):
         *,
         planet_file: str | None = None,
     ) -> float:
-        ini = self.loader.load_ini_file()
+        ini = self._loader.load_ini_file()
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         oe = pd.get_orbital_elements(ini.frame)
         ind_on = self._get_ind_snapshot_uid(pd.t)
@@ -705,7 +868,7 @@ class Field(Generic[F]):
         planet_file: str | None = None,
     ) -> float:
         return _find_planet_azimuth(
-            self.loader,
+            self._loader,
             self.snapshot_uid,
             planet_file=_resolve_planet_file(
                 planet_file=planet_file,
@@ -733,12 +896,12 @@ class Field(Generic[F]):
         theta: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         default_suffix = "latitudinal_projection"
         if theta is not None:
             default_suffix += str(np.pi / 2 - theta)
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=default_suffix,
             operation_name=operation_name,
         )
@@ -826,12 +989,12 @@ class Field(Generic[F]):
         z: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         default_suffix = "vertical_projection"
         if z is not None:
             default_suffix += str(z)
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=default_suffix,
             operation_name=operation_name,
         )
@@ -892,9 +1055,9 @@ class Field(Generic[F]):
         self,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix="vertical_at_midplane",
             operation_name=operation_name,
         )
@@ -939,9 +1102,9 @@ class Field(Generic[F]):
         theta: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
             operation_name=operation_name,
         )
@@ -994,9 +1157,9 @@ class Field(Generic[F]):
         z: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=f"vertical_at_z{z}",
             operation_name=operation_name,
         )
@@ -1036,9 +1199,9 @@ class Field(Generic[F]):
         phi: float = 0.0,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=f"azimuthal_at_phi{phi}",
             operation_name=operation_name,
         )
@@ -1079,14 +1242,14 @@ class Field(Generic[F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
         del planet_number
 
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix="azimuthal_at_planet",
             operation_name=operation_name,
         )
@@ -1095,9 +1258,9 @@ class Field(Generic[F]):
         aziphip = self.azimuthal_at_phi(phi=phip)
         return aziphip.replace(operation=operation)
 
-    def azimuthal_average(self, *, operation_name: str | None = None) -> "Field[F]":
+    def azimuthal_average(self, *, operation_name: str | None = None) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix="azimuthal_average",
             operation_name=operation_name,
         )
@@ -1139,14 +1302,14 @@ class Field(Generic[F]):
         *,
         planet_file: str | None = None,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         planet_file = _resolve_planet_file(
             planet_number=planet_number, planet_file=planet_file
         )
         del planet_number
 
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix="remove_planet_hill_band",
             operation_name=operation_name,
         )
@@ -1197,9 +1360,9 @@ class Field(Generic[F]):
         distance: float = 1.0,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=f"radial_at_r{distance}",
             operation_name=operation_name,
         )
@@ -1236,14 +1399,14 @@ class Field(Generic[F]):
         vmax: float | None = None,
         *,
         operation_name: str | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         if (vmin is None) or (vmax is None):
             raise ValueError(
                 f"The radial interval {vmin=} and {vmax=} should be defined"
             )
 
         operation = self._resolve_operation_name(
-            prefix=self.operation,
+            prefix=self._operation,
             default_suffix=f"radial_average_interval_{vmin}_{vmax}",
             operation_name=operation_name,
         )
@@ -1288,14 +1451,14 @@ class Field(Generic[F]):
             operation=operation,
         )
 
-    def diff(self, on_2: int) -> "Field[F]":
+    def diff(self, on_2: int) -> "GasField[F]":
         ds_2 = GasDataSet(
             on_2,
             geometry=self.geometry,
-            inifile=self.loader.parameter_file,
-            directory=self.loader.parameter_file.parent,
+            inifile=self._loader.parameter_file,
+            directory=self._loader.parameter_file.parent,
         )
-        if self.operation != "":
+        if self._operation != "":
             raise KeyError(
                 "For now, diff should only be applied on the initial Field cube."
             )
@@ -1307,21 +1470,21 @@ class Field(Generic[F]):
         *,
         rotate_with: str | None = None,
         rotate_by: float | None = None,
-    ) -> "Field[F]":
+    ) -> "GasField[F]":
         rotate_by = _resolve_rotate_by(
             rotate_by=rotate_by,
             rotate_with=rotate_with,
             planet_azimuth_finder=partial(
                 _find_planet_azimuth,
-                loader=self.loader,
+                loader=self._loader,
                 snapshot_uid=self.snapshot_uid,
             ),
         )
 
-        operation = self.operation
+        operation = self._operation
         if self.shape.count(1) > 1:
             raise ValueError("data has to be 2D or 3D in order to rotate the data.")
-        if not _fequal(self.rotate_by, rotate_by):
+        if not _fequal(self._rotate_by, rotate_by):
             phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
             if abs(closest_value(phicoord, 0)) > bracketing_values(phicoord, 0).span:
                 ipi = closest_index(phicoord, 2 * np.pi)
@@ -1342,55 +1505,6 @@ class Field(Generic[F]):
         return self.replace(
             data=ret_data.astype(self.dtype, copy=False),
             operation=operation,
-        )
-
-
-class GasField:
-    @deprecated(
-        "nonos.api.analysis.GasField is deprecated since v0.20.0 "
-        "and might be removed in a future version. "
-        "In its current state, the class cannot be instantiated: the object created "
-        "is already an instance of the replacement class, Field. "
-        "Use Field directly to silence this warning."
-    )
-    def __new__(  # type: ignore[misc]
-        cls,
-        field: str,
-        data: FArray3D[F],
-        coords: Coordinates[F],
-        ngeom: str,
-        on: int,
-        operation: str,
-        *,
-        inifile: os.PathLike[str] | None = None,
-        code: str | None = None,
-        directory: os.PathLike[str] | None = None,
-        rotate_by: float | None = None,
-        rotate_with: str | None = None,
-    ) -> "Field[F]":
-        loader = Loader.resolve(
-            code=code,
-            parameter_file=inifile,
-            directory=Path.cwd() if directory is None else Path(directory),
-        )
-        if ngeom != coords.geometry:
-            raise ValueError
-        return Field(
-            name=field,
-            data=data,
-            coordinates=coords,
-            snapshot_uid=on,
-            operation=operation,
-            loader=loader,
-            rotate_by=_resolve_rotate_by(
-                rotate_by=rotate_by,
-                rotate_with=rotate_with,
-                planet_azimuth_finder=partial(
-                    _find_planet_azimuth,
-                    loader=loader,
-                    snapshot_uid=on,
-                ),
-            ),
         )
 
 
@@ -1479,28 +1593,24 @@ class GasDataSet(Generic[D, F]):
             )
         )
 
-        self._read = self._loader.load_bin_data(
-            datafile,
-            geometry=geometry,
-            fluid=fluid,
-        )
+        bd = self._loader.load_bin_data(datafile, geometry=geometry, fluid=fluid)
 
-        self._native_geometry = self._read.geometry
-        self.coordinates: Coordinates[F] = Coordinates(
-            self.native_geometry,
-            self._read.x1,
-            self._read.x2,
-            self._read.x3,
+        self._coordinates = Coordinates(
+            bd.geometry,
+            bd.x1,
+            bd.x2,
+            bd.x3,
         )
-        raw_data: dict[str, FArray3D[F]] = self._read.data
-        self.dict: dict[str, Field[F]] = {}
-        for key, array in raw_data.items():
-            self.dict[key] = Field(
-                name=key,
+        self.dict: dict[str, GasField[F]] = {}
+        for key, array in bd.data.items():
+            self.dict[key] = GasField(
+                key,
                 data=array,
-                coordinates=self.coordinates,
-                snapshot_uid=self.snapshot_uid,
-                loader=self._loader,
+                coords=self.coordinates,
+                ngeom=self.coordinates.geometry,
+                on=self.snapshot_uid,
+                inifile=self._loader.parameter_file,
+                operation="",
             )
 
         # backward compatibility for self.params
@@ -1511,8 +1621,12 @@ class GasDataSet(Generic[D, F]):
         }
 
     @property
-    def native_geometry(self) -> Geometry:
-        return self._native_geometry
+    def coordinates(self) -> Coordinates[F]:
+        return cast(Coordinates[F], self._coordinates)
+
+    @property
+    def geometry(self) -> Geometry:
+        return self._coordinates.geometry
 
     @property
     @deprecated(
@@ -1532,7 +1646,16 @@ class GasDataSet(Generic[D, F]):
     def coords(self) -> Coordinates[F]:
         return self.coordinates
 
-    def __getitem__(self, key: str) -> "Field[F]":
+    @property
+    @deprecated(
+        "GasDataSet.native_geometry is deprecated since v0.20.0, "
+        "and may be removed in a future version. "
+        "Use GasDataSet.geometry instead"
+    )
+    def native_geometry(self) -> Geometry:
+        return self.geometry
+
+    def __getitem__(self, key: str) -> "GasField[F]":
         if key in self.dict:
             return self.dict[key]
         else:
@@ -1546,7 +1669,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.keys()
 
-    def values(self) -> ValuesView["Field[F]"]:
+    def values(self) -> ValuesView["GasField[F]"]:
         """
         Returns
         =======
@@ -1554,7 +1677,7 @@ class GasDataSet(Generic[D, F]):
         """
         return self.dict.values()
 
-    def items(self) -> ItemsView[str, "Field[F]"]:
+    def items(self) -> ItemsView[str, "GasField[F]"]:
         """
         Returns
         =======

@@ -1,27 +1,10 @@
 import os
 import shutil
-from dataclasses import asdict, is_dataclass
 
 import numpy as np
-import numpy.testing as npt
 import pytest
 
 from nonos.api import GasDataSet
-
-
-def assert_obj_equal(o1, o2):
-    assert type(o2) is type(o1)
-    if is_dataclass(o1):
-        return assert_obj_equal(asdict(o1), asdict(o2))
-    for (k1, v1), (k2, v2) in zip(o1.items(), o2.items(), strict=True):
-        assert k2 == k1
-        match v1:
-            case dict():
-                return assert_obj_equal(v2, v1)
-            case np.ndarray():
-                npt.assert_array_equal(v2, v1)
-            case _:
-                assert v2 == v1
 
 
 def test_from_npy_error(test_data_dir):

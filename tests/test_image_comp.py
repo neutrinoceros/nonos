@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 
 from nonos._geometry import Coordinates
 from nonos.api import Field, GasDataSet, NonosLick
-from nonos.loaders import Loader
 from nonos.styling import set_mpl_style
 
 
@@ -131,14 +130,11 @@ def test_nonoslick_method(method, tmp_path):
     with open(tmp_path / "idefix.ini", "wb") as fh:
         inifix.dump(data, fh)
 
-    loader = Loader.resolve(directory=tmp_path)
     Vx, Vy, F = [
         Field(
             name=name,
             data=arr,
             coordinates=fake_coords,
-            snapshot_uid=0,
-            loader=loader,
         )
         for name, arr in [("Vx", fake_Vx), ("Vy", fake_Vy), ("F", fake_F)]
     ]

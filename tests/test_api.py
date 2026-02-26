@@ -7,31 +7,11 @@ import pytest
 from pytest import RaisesExc, RaisesGroup
 
 from nonos._geometry import Coordinates, Geometry
-from nonos.api import Field, GasDataSet, GasField, file_analysis
-from nonos.loaders import Loader
-
-
-def test_gasfield_deprecation(test_data_dir):
-    with pytest.deprecated_call():
-        gs = GasField(
-            field="test",
-            data=np.arange(30, dtype="float64").reshape(2, 3, 5),
-            coords=Coordinates(
-                geometry=Geometry.CARTESIAN,
-                x1=np.linspace(0, 1, 3),
-                x2=np.linspace(0, 1, 4),
-                x3=np.linspace(0, 1, 6),
-            ),
-            ngeom=Geometry.CARTESIAN,
-            on=0,
-            operation="",
-            directory=test_data_dir / "idefix_planet3d",
-        )
-    assert type(gs) is Field
+from nonos.api import Field, GasDataSet, file_analysis
 
 
 @pytest.fixture
-def stub_field(test_data_dir):
+def stub_field():
     return Field(
         name="test",
         data=np.arange(30, dtype="float64").reshape(2, 3, 5),
@@ -40,10 +20,6 @@ def stub_field(test_data_dir):
             x1=np.linspace(0, 1, 3),
             x2=np.linspace(0, 1, 4),
             x3=np.linspace(0, 1, 6),
-        ),
-        snapshot_uid=0,
-        loader=Loader.resolve(
-            directory=test_data_dir / "idefix_planet3d",
         ),
     )
 
