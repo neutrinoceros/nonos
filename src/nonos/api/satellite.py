@@ -3,14 +3,14 @@ import sys
 from importlib.metadata import version
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, TypeAlias
+from typing import TYPE_CHECKING, Generic, Literal, Protocol, TypeAlias
 
 import numpy as np
 from packaging.version import Version
 
 from nonos._geometry import Coordinates
 from nonos._types import F, FArray2D, FArray3D, StrDict
-from nonos.api.analysis import Field, Plotable
+from nonos.api.analysis import Field, GasField, Plotable
 from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 13):
@@ -72,14 +72,18 @@ def file_analysis(
 InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]
 
 
+class F2DViewer(Generic[F], Protocol):  # type: ignore[misc]
+    def as_2dview(self) -> FArray2D[F]: ...
+
+
 class NonosLick(Generic[F]):
     def __init__(
         self,
         x: FArray2D[F],
         y: FArray2D[F],
-        lx: Field[F],
-        ly: Field[F],
-        field: Field[F],
+        lx: F2DViewer[F],
+        ly: F2DViewer[F],
+        field: F2DViewer[F],
         *,
         xmin: float | None = None,
         xmax: float | None = None,
@@ -221,7 +225,7 @@ def compute(
 @deprecated(
     "nonos.api.satellite.from_data is deprecated since v0.11.0 "
     "and may be removed in a future version. "
-    "Use Field.replace instead."
+    "Use GasField.replace instead."
 )
 def from_data(
     *,
@@ -233,12 +237,15 @@ def from_data(
     inifile: os.PathLike[str] | None = None,
     code: str | None = None,
     directory: os.PathLike[str] | None = None,
-) -> Field[F]:  # pragma: no cover
-    return Field(
-        name=field,
+) -> GasField[F]:  # pragma: no cover
+    return GasField(
+        field,
         data=data,
-        coordinates=coords,
-        snapshot_uid=on,
-        loader=Loader.resolve(code=code, parameter_file=inifile, directory=directory),
+        coords=coords,
+        ngeom=coords.geometry,
+        on=on,
+        code=code,
+        inifile=inifile,
+        directory=directory,
         operation=operation,
     )
