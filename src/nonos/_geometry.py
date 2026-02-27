@@ -14,7 +14,7 @@ from typing import Generic, cast, final, overload
 import numpy as np
 
 from nonos._integrity_checks import collect_dtype_exceptions, compile_exceptions
-from nonos._types import F, FArray1D, StrDict
+from nonos._types import D, F, FArray, FArray1D, FArray2D, StrDict
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -333,16 +333,21 @@ class Coordinates(Generic[F]):
 
     def _meshgrid_conversion_2d(
         self, axis_1: Axis, axis_2: Axis
-    ) -> dict[Axis, FArray1D[F]]:
-        # TODO: fix interface
+    ) -> dict[Axis, FArray2D[F]]:
         native_plane_axes = self.native_from_wanted(axis_1, axis_2)
         native_meshcoords = self._meshgrid_reduction(*native_plane_axes)
         target_geometry = _get_target_geometry(axis_1, axis_2)
         return self.target_from_native(target_geometry, native_meshcoords)
 
+    @overload
     def _meshgrid_reduction(
-        self, axis_1: Axis, axis_2: Axis | None, /
-    ) -> dict[Axis, FArray1D[F]]:
+        self, axis_1: Axis, axis_2: None, /
+    ) -> dict[Axis, FArray1D[F]]: ...
+    @overload
+    def _meshgrid_reduction(
+        self, axis_1: Axis, axis_2: Axis, /
+    ) -> dict[Axis, FArray2D[F]]: ...
+    def _meshgrid_reduction(self, axis_1, axis_2, /):  # type: ignore[no-untyped-def]
         # TODO: this could easily be split into 2 functions (one for each dimensions)
         axes = axis_1, axis_2
         gaxes = axes_from_geometry(self.geometry)
@@ -351,29 +356,29 @@ class Coordinates(Generic[F]):
         if axis_2 is not None and axis_2 not in gaxes:
             raise ValueError(f"expected one of {gaxes}, got {axis_2}")
 
-        dictmesh: dict[Axis, FArray1D[F]] = {}
         if axis_2 is None:
             # 1D case
-            dictmesh[axis_1] = self.get_axis_array_med(axis_1)
+            return {axis_1: self.get_axis_array_med(axis_1)}
         else:
             # 2D case
-            dictcoords: dict[Axis, FArray1D[F]] = {
-                axis_1: self.get_axis_array(axis_1),
-                axis_2: self.get_axis_array(axis_2),
-            }
-            dictmesh[axis_1], dictmesh[axis_2] = np.meshgrid(
-                dictcoords[axis_1], dictcoords[axis_2]
-            )
             normal = set(gaxes).difference(axes).pop()
-            dictmesh[normal] = self.get_axis_array_med(normal)
-
-        return dictmesh
+            a1, a2 = np.meshgrid(
+                self.get_axis_array(axis_1), self.get_axis_array(axis_2)
+            )
+            return {
+                axis_1: a1,
+                axis_2: a2,
+                # this is *not* consistent with the corresponding overload
+                # typecheckers do not actually verify it
+                # https://github.com/la-niche/nonos/issues/672
+                normal: self.get_axis_array_med(normal),
+            }
 
     def target_from_native(
         self,
         target_geometry: Geometry,
-        coords: dict[Axis, FArray1D[F]],
-    ) -> dict[Axis, FArray1D[F]]:
+        coords: dict[Axis, FArray[D, F]],
+    ) -> dict[Axis, FArray[D, F]]:
         match self.geometry:
             case Geometry.CARTESIAN:
                 x = coords[Axis.CARTESIAN_X]
