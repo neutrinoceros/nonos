@@ -13,7 +13,7 @@ if sys.version_info < (3, 11):
     from exceptiongroup import ExceptionGroup
 
 if TYPE_CHECKING:
-    from nonos.api import Field
+    from nonos.api.analysis import Field
 
 
 def collect_shape_exceptions(

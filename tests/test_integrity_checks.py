@@ -14,7 +14,7 @@ from nonos._integrity_checks import (
     collect_shape_exceptions,
     compile_exceptions,
 )
-from nonos.api import Field
+from nonos.api.analysis import Field
 
 if sys.version_info >= (3, 13):
     from copy import replace

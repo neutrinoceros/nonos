@@ -524,7 +524,7 @@ class GasField(Generic[F]):
         return self._snapshot_uid
 
     @property
-    def snapshot_number(self) -> int:
+    def snapshot_number(self) -> int:  # pragma: no cover
         # supported (non-deprecated) alias
         return self.snapshot_uid
 

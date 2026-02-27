@@ -8,7 +8,8 @@ import pytest
 from pytest import RaisesExc, RaisesGroup
 
 from nonos._geometry import Coordinates, Geometry
-from nonos.api import Field, GasDataSet, file_analysis
+from nonos.api import GasDataSet, file_analysis
+from nonos.api.analysis import Field
 
 
 @pytest.fixture
