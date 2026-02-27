@@ -10,7 +10,8 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 
 from nonos._geometry import Coordinates
-from nonos.api import Field, GasDataSet, NonosLick
+from nonos.api import GasDataSet, NonosLick
+from nonos.api.analysis import Field
 from nonos.styling import set_mpl_style
 
 

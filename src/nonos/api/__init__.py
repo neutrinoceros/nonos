@@ -1,7 +1,6 @@
 __all__ = [
-    "Field",
     "GasDataSet",
-    "GasField",  # deprecated
+    "GasField",
     "NonosLick",
     "Plotable",
     "bracketing_values",
@@ -13,7 +12,7 @@ __all__ = [
     "find_nearest",  # deprecated
     "from_data",
 ]
-from .analysis import Field, GasDataSet, GasField, Plotable
+from .analysis import GasDataSet, GasField, Plotable
 from .satellite import NonosLick, compute, file_analysis, from_data
 from .tools import (
     bracketing_values,
