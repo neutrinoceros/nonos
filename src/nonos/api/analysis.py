@@ -1532,7 +1532,8 @@ class GasField(Generic[F]):
             raise KeyError(
                 "For now, diff should only be applied on the initial Field cube."
             )
-        ret_data = (self.data - ds_2[self.name].data) / ds_2[self.name].data
+        gf = ds_2[self.name]
+        ret_data = ((self._field - gf._field) / gf._field).data
         return self.replace(data=ret_data.astype(self.dtype, copy=False))
 
     def rotate(
