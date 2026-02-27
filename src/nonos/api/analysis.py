@@ -654,10 +654,10 @@ class GasField(Generic[F]):
         axis_1 = Axis.from_label(a)
 
         if b is None:
-            meshgrid_conversion = self.coordinates._meshgrid_conversion_1d(axis_1)
+            mesh1D = self.coordinates._meshgrid_conversion_1d(axis_1)
 
-            abscissa_value = list(meshgrid_conversion.values())[0]
-            abscissa_key = list(meshgrid_conversion.keys())[0]
+            abscissa_val1D = next(iter(mesh1D.values()))
+            abscissa_key = next(iter(mesh1D.keys()))
             if axis_1 is Axis.AZIMUTH and not _fequal(self._rotate_by, rotate_by):
                 phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
                 bv = bracketing_values(phicoord, 0)
@@ -678,22 +678,17 @@ class GasField(Generic[F]):
                 data_view = self.data.view()
 
             return Plotable(
-                abscissa=(abscissa_key.label, abscissa_value),
+                abscissa=(abscissa_key.label, abscissa_val1D),
                 ordinate=(data_key, data_view.squeeze()),
             )
 
         else:
             axis_2 = Axis.from_label(b)
 
-            meshgrid_conversion = self.coordinates._meshgrid_conversion_2d(
-                axis_1, axis_2
-            )
+            mesh2D = self.coordinates._meshgrid_conversion_2d(axis_1, axis_2)
             # meshgrid in polar coordinates P, R (if "R", "phi") or R, P (if "phi", "R")
             # idem for all combinations of R,phi,z
-            abscissa_value, ordinate_value = (
-                meshgrid_conversion[axis_1],
-                meshgrid_conversion[axis_2],
-            )
+            abscissa_val2D, ordinate_value = (mesh2D[axis_1], mesh2D[axis_2])
             abscissa_key, ordinate_key = (axis_1, axis_2)
             native_plane_axes = self.coordinates.native_from_wanted(axis_1, axis_2)
             if Axis.AZIMUTH in native_plane_axes and not _fequal(
@@ -737,7 +732,7 @@ class GasField(Generic[F]):
                 data_view = data_view.T
 
             return Plotable(
-                abscissa=(abscissa_key.label, abscissa_value),
+                abscissa=(abscissa_key.label, abscissa_val2D),
                 ordinate=(ordinate_key.label, ordinate_value),
                 field=(data_key, data_view),
             )
