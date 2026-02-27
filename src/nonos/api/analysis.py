@@ -136,14 +136,8 @@ class Plotable(Generic[D, F]):
         dpi: int = 500,
         title: str | None = None,
         unit_conversion: float | None = None,
-        nbin: int | None = None,  # deprecated
         **kwargs: Unpack[PColorMeshKwargs],
     ) -> "Artist":
-        if nbin is not None:
-            warnings.warn(
-                "The nbin parameter has no effect and is deprecated",
-                stacklevel=2,
-            )
         data = self.data
         if unit_conversion is not None:
             data = data * unit_conversion
