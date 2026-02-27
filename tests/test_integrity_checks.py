@@ -1,15 +1,25 @@
 import re
+import sys
 from itertools import chain, permutations
+from uuid import uuid4
 
 import numpy as np
 import pytest
 from pytest import RaisesExc, RaisesGroup
 
+from nonos._geometry import Coordinates, Geometry
 from nonos._integrity_checks import (
+    check_field_operands,
     collect_dtype_exceptions,
     collect_shape_exceptions,
     compile_exceptions,
 )
+from nonos.api import Field
+
+if sys.version_info >= (3, 13):
+    from copy import replace
+else:
+    from dataclasses import replace
 
 
 @pytest.mark.parametrize(
@@ -71,6 +81,81 @@ def test_collect_dtype_exceptions(a, b, neq_attributes):
                 + "$",
             ):
                 raise exc
+
+
+@pytest.fixture
+def stub_coordinates():
+    return Coordinates(
+        geometry=Geometry.CARTESIAN,
+        x1=np.arange(3, dtype="f8"),
+        x2=np.arange(4, dtype="f8"),
+        x3=np.arange(5, dtype="f8"),
+    )
+
+
+def test_check_field_operands(stub_coordinates, subtests):
+    data1 = np.arange(24, dtype="f8").reshape(2, 3, 4)
+    data2 = np.ones_like(data1)
+    c = stub_coordinates
+    f1 = Field(name=uuid4(), data=data1, coordinates=c)
+    f2 = Field(name=uuid4(), data=data2, coordinates=c)
+
+    # first check that basic inputs are compatible
+    assert check_field_operands(f1, f2) is None
+
+    for cvar, subid in [
+        (replace(c, geometry=Geometry.SPHERICAL), "neq-geometry"),
+        (replace(c, x1=2 * c.x1), "neq-x1"),
+    ]:
+        exc = check_field_operands(f1, f2.replace(coordinates=cvar))
+        assert exc is not None
+        with (
+            subtests.test(subid),
+            pytest.raises(
+                TypeError,
+                match=r"^operands have incompatible coordinates$",
+            ),
+        ):
+            raise exc
+
+    exc = check_field_operands(f1, f2.astype("f4"))
+    assert exc is not None
+    with (
+        subtests.test("neq-dtype"),
+        pytest.raises(
+            TypeError,
+            match=r"^operands have incompatible dtypes$",
+        ),
+    ):
+        raise exc
+
+    f3 = Field(
+        name=uuid4(),
+        data=data2.reshape(4, 3, 2),
+        coordinates=replace(c, x1=c.x3, x3=c.x1),
+    )
+    exc = check_field_operands(f1, f3)
+    assert exc is not None
+    with (
+        subtests.test("neq-shape"),
+        pytest.raises(
+            TypeError,
+            match=r"^operands have incompatible shapes$",
+        ),
+    ):
+        raise exc
+
+    exc = check_field_operands(f1, f3.astype("f4"))
+    assert exc is not None
+    with (
+        subtests.test("neq-shape-neq-dtype"),
+        RaisesGroup(
+            RaisesExc(TypeError, match=r"^operands have incompatible dtypes$"),
+            RaisesExc(TypeError, match=r"^operands have incompatible shapes$"),
+            match="multiple issues with operands",
+        ),
+    ):
+        raise exc
 
 
 @pytest.mark.parametrize(

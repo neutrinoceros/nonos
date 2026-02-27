@@ -1,12 +1,14 @@
 import dataclasses
 import json
+import operator as op
 import os
 import sys
 import warnings
 from collections import deque
-from collections.abc import ItemsView, KeysView, ValuesView
+from collections.abc import Callable, ItemsView, KeysView, ValuesView
 from dataclasses import dataclass
-from functools import partial
+from functools import partial, wraps
+from numbers import Real
 from pathlib import Path
 from shutil import copyfile
 from typing import (
@@ -14,6 +16,8 @@ from typing import (
     Any,
     Generic,
     Literal,
+    TypeAlias,
+    TypeVar,
     cast,
     final,
     overload,
@@ -22,6 +26,7 @@ from typing import (
 import numpy as np
 from matplotlib.scale import SymmetricalLogTransform
 from matplotlib.ticker import SymmetricalLogLocator
+from numpy import float32 as f32, float64 as f64
 
 from nonos._geometry import (
     Axis,
@@ -30,6 +35,7 @@ from nonos._geometry import (
     axes_from_geometry,
 )
 from nonos._integrity_checks import (
+    check_field_operands,
     collect_dtype_exceptions,
     collect_shape_exceptions,
     compile_exceptions,
@@ -238,10 +244,45 @@ def _find_planet_azimuth(
     return float(np.arctan2(pd.y, pd.x)[ind_on] % (2 * np.pi))
 
 
+FieldOp: TypeAlias = Callable[["Field[F]", Any], "Field[F]"]
+
+
+def _arithmetic_field_operator(
+    baseop: Callable[[FArray3D[F], Any], FArray3D[F]],
+    result_name: str,
+    *,
+    reverse_operands: bool = False,
+) -> Callable[["FieldOp[F]"], "FieldOp[F]"]:
+    def decorator(meth: "FieldOp[F]") -> "FieldOp[F]":
+        @wraps(meth)
+        def impl(f1: "Field[F]", f2: Any) -> "Field[F]":
+            operands: tuple[FArray3D[F], Any]
+            match f2:
+                case Field():
+                    if excs := check_field_operands(f1, f2):
+                        raise excs
+                    f2 = cast("Field[F]", f2)
+                    operands = (f1.data, f2.data)
+                case Real():
+                    operands = (f1.data, f2)
+                case _:
+                    return NotImplemented  # type: ignore[no-any-return]
+            if reverse_operands:
+                operands = tuple(reversed(operands))
+            return f1.replace(name=result_name, data=baseop(*operands).astype(f1.dtype))
+
+        return impl
+
+    return decorator
+
+
 class FieldAttrs(Generic[F], TypedDict, total=False):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
+
+
+T = TypeVar("T", f32, f64)
 
 
 @final
@@ -390,6 +431,40 @@ class Field(Generic[F]):
         .. versionadded: 0.20.0
         """
         return self.as_ndview(ndim=3)
+
+    def astype(self, dtype: np.dtype[T]) -> "Field[T]":
+        """
+        For convenience, mimic np.ndarray.astype
+
+        The underlying data is always copied.
+
+        .. versionadded: 0.20.0
+        """
+        return Field(
+            name=self.name,
+            data=self.data.astype(dtype),
+            coordinates=self.coordinates.astype(dtype),
+        )
+
+    # despite my best effort, type checkers (mypy and ty) do not
+    # seem able to infer that these decorated methods are in fact
+    # type-safe: their real bodies live in the decorator's implementation
+    @_arithmetic_field_operator(op.add, "<sum-result>")
+    def __add__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.add, "<sum-result>", reverse_operands=True)
+    def __radd__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.sub, "<sub-result>")
+    def __sub__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.sub, "<sub-result>", reverse_operands=True)
+    def __rsub__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.mul, "<mul-result>")
+    def __mul__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.mul, "<mul-result>", reverse_operands=True)
+    def __rmul__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.truediv, "<truediv-result>")
+    def __truediv__(self, other: Any) -> "Field[F]": ...  # type: ignore
+    @_arithmetic_field_operator(op.truediv, "<truediv-result>", reverse_operands=True)
+    def __rtruediv__(self, other: Any) -> "Field[F]": ...  # type: ignore
 
 
 class GasFieldReplaceKwargs(Generic[F], TypedDict, total=False):
@@ -1457,7 +1532,8 @@ class GasField(Generic[F]):
             raise KeyError(
                 "For now, diff should only be applied on the initial Field cube."
             )
-        ret_data = (self.data - ds_2[self.name].data) / ds_2[self.name].data
+        gf = ds_2[self.name]
+        ret_data = ((self._field - gf._field) / gf._field).data
         return self.replace(data=ret_data.astype(self.dtype, copy=False))
 
     def rotate(

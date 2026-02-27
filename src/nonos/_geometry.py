@@ -9,9 +9,10 @@ __all__ = [
 import sys
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Generic, cast, final, overload
+from typing import Any, Generic, TypeVar, cast, final, overload
 
 import numpy as np
+from numpy import float32 as f32, float64 as f64
 
 from nonos._integrity_checks import collect_dtype_exceptions, compile_exceptions
 from nonos._types import D, F, FArray, FArray1D, FArray2D, StrDict
@@ -220,8 +221,11 @@ def _native_plane_from_target_plane(
             )
 
 
+T = TypeVar("T", f32, f64)
+
+
 @final
-@dataclass(frozen=True, eq=False, slots=True)
+@dataclass(frozen=True, slots=True)
 class Coordinates(Generic[F]):
     geometry: Geometry
     x1: FArray1D[F]
@@ -258,6 +262,21 @@ class Coordinates(Generic[F]):
         if exc := compile_exceptions("multiple issues with input arrays", *excs):
             raise exc
 
+    def __eq__(self, other: Any) -> bool:
+        # checks are ordered from cheapest to most expensive
+        # so False is returned as early as possible when other
+        # is not comparable
+        return other is self or (
+            type(other) is Coordinates
+            and self.geometry == other.geometry
+            and self.shape == other.shape
+            and bool(
+                np.all(self.x3 == other.x3)
+                and np.all(self.x2 == other.x2)
+                and np.all(self.x1 == other.x1)
+            )
+        )
+
     @property
     def shape(self) -> tuple[int, int, int]:
         return len(self.x1), len(self.x2), len(self.x3)
@@ -265,6 +284,21 @@ class Coordinates(Generic[F]):
     @property
     def dtype(self) -> np.dtype[F]:
         return self.x1.dtype
+
+    def astype(self, dtype: np.dtype[T]) -> Coordinates[T]:
+        """
+        For convenience, mimic np.ndarray.astype
+
+        The underlying data is always copied.
+
+        .. versionadded: 0.20.0
+        """
+        return Coordinates(
+            geometry=self.geometry,
+            x1=self.x1.astype(dtype),
+            x2=self.x2.astype(dtype),
+            x3=self.x3.astype(dtype),
+        )
 
     @property
     def axes(self) -> tuple[Axis, Axis, Axis]:
