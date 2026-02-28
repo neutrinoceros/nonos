@@ -1,3 +1,4 @@
+import sys
 from itertools import chain, combinations, permutations
 
 import numpy as np
@@ -8,6 +9,7 @@ from pytest import RaisesExc, RaisesGroup
 from nonos._geometry import (
     _AXIS_TO_STR,
     _STR_TO_AXIS,
+    AutoIndex,
     Axis,
     Coordinates,
     Geometry,
@@ -16,6 +18,11 @@ from nonos._geometry import (
     _native_plane_from_target_plane,
     axes_from_geometry,
 )
+
+if sys.version_info >= (3, 13):
+    from copy import replace
+else:
+    from dataclasses import replace
 
 
 @pytest.mark.parametrize(
@@ -146,3 +153,76 @@ def test_deprecated_coordinates_array_accesses(geometry):
         with pytest.deprecated_call():
             arrmed = getattr(coords, f"{attr}med")
         npt.assert_array_equal(arrmed, coords.get_axis_array_med(attr))
+
+
+def test_slice_at_index(subtests):
+    x1 = np.linspace(-1, 1, 10)
+    x2 = np.linspace(-2, 2, 20)
+    x3 = np.linspace(-3_000, 4_000, 300_000)
+    c0 = Coordinates(Geometry.CARTESIAN, x1, x2, x3)
+
+    with subtests.test("x"):
+        c1 = c0.slice_at_index(Axis.CARTESIAN_X, 5)
+        assert c1.shape == (2, x2.size, x3.size)
+        assert np.all(c1.x1 == c0.x1[5])
+
+        c1L = c0.slice_at_index(Axis.CARTESIAN_X, AutoIndex.LEFTMOST)
+        assert c1L.shape == c1.shape
+        assert np.all(c1L.x1 == c0.x1[0])
+
+    with subtests.test("y"):
+        c2 = c0.slice_at_index(Axis.CARTESIAN_Y, 8)
+        assert c2.shape == (x1.size, 2, x3.size)
+        assert np.all(c2.x2 == c0.x2[8])
+
+        c2R = c0.slice_at_index(Axis.CARTESIAN_Y, AutoIndex.RIGHTMOST)
+        assert c2R.shape == c2.shape
+        assert np.all(c2R.x2 == c0.x2[-1])
+
+    with subtests.test("z"):
+        c3 = c0.slice_at_index(Axis.CARTESIAN_Z, -100)
+        assert c3.shape == (x1.size, x2.size, 2)
+        assert np.all(c3.x3 == c0.x3[-100])
+
+        c3M = c0.slice_at_index(Axis.CARTESIAN_Z, AutoIndex.MIDPOINT)
+        assert c3M.shape == c3.shape
+        # not that 500 itself isn't part of c0.c3
+        assert np.all(c3M.x3 == 500.0)
+
+
+def test_periodic_shift(subtests):
+    x1 = np.linspace(-1, 1, 10)
+    x2 = np.linspace(-2, 2, 20)
+    x3 = np.linspace(-3_000, 4_000, 300_000)
+    c0 = Coordinates(Geometry.CARTESIAN, x1, x2, x3)
+
+    with subtests.test("x"):
+        c1 = c0.periodic_shift(Axis.CARTESIAN_X, by=5)
+        assert c1 == replace(c0, x1=np.roll(x1, shift=5))
+
+    with subtests.test("y"):
+        c2 = c0.periodic_shift(Axis.CARTESIAN_Y, by=10)
+        assert c2 == replace(c0, x2=np.roll(x2, shift=10))
+
+    with subtests.test("z"):
+        c3 = c0.periodic_shift(Axis.CARTESIAN_Z, by=20)
+        assert c3 == replace(c0, x3=np.roll(x3, shift=20))
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_periodic_shift_stretched_axis(dtype):
+    c0 = Coordinates(
+        Geometry.CARTESIAN,
+        x1=np.linspace(-1, 1, 10),
+        x2=np.linspace(-2, 2, 20),
+        x3=np.geomspace(1, 4, 30),
+    ).astype(dtype)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"^periodic shifting requires exactly equal "
+            r"grid spacing in the shift direction$"
+        ),
+    ):
+        c0.periodic_shift(Axis.CARTESIAN_Z, by=20)
