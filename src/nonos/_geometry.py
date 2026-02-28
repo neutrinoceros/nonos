@@ -7,9 +7,10 @@ __all__ = [
     "axes_from_geometry",
 ]
 import sys
+from copy import copy
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Generic, TypeVar, cast, final, overload
+from typing import Any, Generic, Literal, TypeVar, cast, final, overload
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
@@ -25,8 +26,11 @@ else:
 
     from nonos._backports import StrEnum
 if sys.version_info >= (3, 13):
+    from copy import replace
     from warnings import deprecated
 else:
+    from dataclasses import replace
+
     from typing_extensions import deprecated
 
 
@@ -293,12 +297,15 @@ class Coordinates(Generic[F]):
 
         .. versionadded: 0.20.0
         """
-        return Coordinates(
-            geometry=self.geometry,
-            x1=self.x1.astype(dtype),
-            x2=self.x2.astype(dtype),
-            x3=self.x3.astype(dtype),
-        )
+        if self.dtype == dtype:
+            return copy(self)  # type: ignore
+        else:
+            return replace(  # type: ignore
+                self,
+                x1=self.x1.astype(dtype),
+                x2=self.x2.astype(dtype),
+                x3=self.x3.astype(dtype),
+            )
 
     @property
     def axes(self) -> tuple[Axis, Axis, Axis]:
@@ -309,6 +316,17 @@ class Coordinates(Generic[F]):
         if axis not in axes:
             raise ValueError(f"axis {axis} isn't native to {self.geometry} geometry")
         return axes.index(axis)
+
+    def get_axis_attr_name(self, axis: Axis) -> Literal["x1", "x2", "x3"]:
+        match self.get_axis_index(axis):
+            case 0:
+                return "x1"
+            case 1:
+                return "x2"
+            case 2:
+                return "x3"
+            case _ as _unreachable:
+                raise AssertionError
 
     def get_axis_array(self, axis: Axis | str) -> FArray1D[F]:
         if isinstance(axis, str):
@@ -335,10 +353,12 @@ class Coordinates(Generic[F]):
     def project_along(self, axis: Axis, position: float) -> Coordinates[F]:
         from nonos.api.tools import bracketing_values  # avoid an import cycle
 
-        idx = self.get_axis_index(axis)
-        arrs = [self.get_axis_array(ax) for ax in self.axes]
-        arrs[idx] = bracketing_values(arrs[idx], position).as_array(dtype=self.dtype)
-        return Coordinates(self.geometry, *arrs)
+        attr = self.get_axis_attr_name(axis)
+        array = bracketing_values(
+            self.get_axis_array(axis),
+            position,
+        ).as_array(dtype=self.dtype)
+        return replace(self, **{attr: array})  # type: ignore
 
     def to_dict(self) -> StrDict:
         return {"geometry": self.geometry} | {
