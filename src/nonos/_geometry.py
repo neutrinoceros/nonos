@@ -271,9 +271,9 @@ class Coordinates(Generic[F]):
             and self.geometry == other.geometry
             and self.shape == other.shape
             and bool(
-                np.all(self.x3 == other.x3)
-                and np.all(self.x2 == other.x2)
-                and np.all(self.x1 == other.x1)
+                (other.x3 is self.x3 or np.all(other.x3 == self.x3))
+                and (other.x2 is self.x2 or np.all(other.x2 == self.x2))
+                and (other.x1 is self.x1 or np.all(other.x1 == self.x1))
             )
         )
 
