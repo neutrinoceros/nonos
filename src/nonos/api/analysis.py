@@ -1547,7 +1547,7 @@ class GasField(Generic[F]):
         )
 
         operation = self._operation
-        if self.shape.count(1) > 1:
+        if self.effective_ndim < 2:
             raise ValueError("data has to be 2D or 3D in order to rotate the data.")
         if not _fequal(self._rotate_by, rotate_by):
             phicoord = self.coordinates.get_axis_array(Axis.AZIMUTH) - rotate_by
