@@ -7,7 +7,6 @@ __all__ = [
     "axes_from_geometry",
 ]
 import sys
-from copy import copy
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Generic, Literal, TypeVar, cast, final, overload
@@ -297,15 +296,12 @@ class Coordinates(Generic[F]):
 
         .. versionadded: 0.20.0
         """
-        if self.dtype == dtype:
-            return copy(self)  # type: ignore
-        else:
-            return replace(  # type: ignore
-                self,
-                x1=self.x1.astype(dtype),
-                x2=self.x2.astype(dtype),
-                x3=self.x3.astype(dtype),
-            )
+        return Coordinates(
+            geometry=self.geometry,
+            x1=self.x1.astype(dtype),
+            x2=self.x2.astype(dtype),
+            x3=self.x3.astype(dtype),
+        )
 
     @property
     def axes(self) -> tuple[Axis, Axis, Axis]:
