@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 __all__ = [
+    "AutoIndex",
     "Axis",
     "Coordinates",
     "Geometry",
@@ -68,6 +69,12 @@ _AXIS_TO_STR = {
 }
 _STR_TO_AXIS = {v: k for k, v in _AXIS_TO_STR.items()}
 assert all(axis in _AXIS_TO_STR for axis in Axis)
+
+
+class AutoIndex(Enum):
+    LEFTMOST = auto()
+    RIGHTMOST = auto()
+    MIDPOINT = auto()
 
 
 def axes_from_geometry(geometry: Geometry, /) -> tuple[Axis, Axis, Axis]:
@@ -346,7 +353,16 @@ class Coordinates(Generic[F]):
         arr = self.get_axis_array(axis)
         return cast(FArray1D[F], 0.5 * (arr[1:] + arr[:-1]))
 
+    def is_uniformly_spaced(self, axis: Axis) -> bool:
+        base = self.get_axis_array(axis)
+        dbase = np.diff(base)
+        return bool(
+            dbase.std() / dbase.max() / dbase.size < 5 * np.finfo(base.dtype).eps
+        )
+
+    # transformations
     def project_along(self, axis: Axis, position: float) -> Coordinates[F]:
+        # TODO: stop using this method and deprecate it
         from nonos.api.tools import bracketing_values  # avoid an import cycle
 
         attr = self.get_axis_attr_name(axis)
@@ -355,6 +371,40 @@ class Coordinates(Generic[F]):
             position,
         ).as_array(dtype=self.dtype)
         return replace(self, **{attr: array})  # type: ignore
+
+    def slice_at_index(self, axis: Axis, idx: int | AutoIndex, /) -> Coordinates[F]:
+        attr = self.get_axis_attr_name(axis)
+        arr = self.get_axis_array(axis)
+        match idx:
+            case AutoIndex.LEFTMOST:
+                value = arr.min()
+            case AutoIndex.RIGHTMOST:
+                value = arr.max()
+            case AutoIndex.MIDPOINT:
+                value = 0.5 * (arr.max() + arr.min())
+            case _:
+                value = arr[idx]
+
+        return replace(self, **{attr: np.array([value])})  # type: ignore
+
+    def periodic_shift(self, axis: Axis, /, *, by: int) -> Coordinates[F]:
+        # this represents the fundamental implementation of a rotation along
+        # some curvilinear axis, but should accept any valid axis nonetheless:
+        # the important part is that it should be able to assume periodicity, which
+        # the required keyword argument 'period' hopefully conveys
+        # Note that the axis specified is the direction of the shift in the
+        # appropriate coordinates, *not* a normal, which would in general be ill-defined
+        attr = self.get_axis_attr_name(axis)
+        if not self.is_uniformly_spaced(axis):
+            raise ValueError(
+                "periodic shifting requires exactly equal "
+                "grid spacing in the shift direction"
+            )
+
+        return replace(  # type: ignore
+            self,
+            **{attr: np.roll(self.get_axis_array(axis), shift=by)},  # type: ignore
+        )
 
     def to_dict(self) -> StrDict:
         return {"geometry": self.geometry} | {
