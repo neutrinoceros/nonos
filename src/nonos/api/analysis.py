@@ -1459,16 +1459,11 @@ class GasField(Generic[F]):
 
     def radial_average_interval(
         self,
-        vmin: float | None = None,
-        vmax: float | None = None,
+        vmin: float,
+        vmax: float,
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        if (vmin is None) or (vmax is None):
-            raise ValueError(
-                f"The radial interval {vmin=} and {vmax=} should be defined"
-            )
-
         operation = self._resolve_operation_name(
             prefix=self._operation,
             default_suffix=f"radial_average_interval_{vmin}_{vmax}",
@@ -1484,21 +1479,11 @@ class GasField(Generic[F]):
                     f"geometry flag '{self.geometry}' not implemented yet for radial_at_r"
                 )
             case Geometry.POLAR:
-                R = self.coordinates.get_axis_array(Axis.CYLINDRICAL_RADIUS)
-                if vmin is None:
-                    vmin = R.min()
-                if vmax is None:
-                    vmax = R.max()
                 Rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
                 ret_coords = self.coordinates.project_along(
                     Axis.CYLINDRICAL_RADIUS, Rmed[ir].item()
                 )
             case Geometry.SPHERICAL:
-                r = self.coordinates.get_axis_array(Axis.SPHERICAL_RADIUS)
-                if vmin is None:
-                    vmin = r.min()
-                if vmax is None:
-                    vmax = r.max()
                 rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
                 ret_coords = self.coordinates.project_along(
                     Axis.SPHERICAL_RADIUS, rmed[ir].item()
