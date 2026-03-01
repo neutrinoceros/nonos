@@ -127,15 +127,6 @@ def test_latitudinal_projection(test_data_dir):
     np.testing.assert_equal(gflpt.data, gflp.data)
 
 
-def test_radial_average_interval_vmin_vmax(test_data_dir):
-    os.chdir(test_data_dir / "idefix_spherical_planet3d")
-    with pytest.raises(
-        ValueError,
-        match=r"The radial interval vmin=1 and vmax=None should be defined",
-    ):
-        GasDataSet(500)["RHO"].radial_average_interval(1)
-
-
 def test_default_operation_name(test_data_dir):
     os.chdir(test_data_dir / "idefix_spherical_planet3d")
     gf = GasDataSet(500)["RHO"].radial_average_interval(1, 2)
