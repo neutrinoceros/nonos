@@ -208,13 +208,16 @@ def test_api_fluid_uidefix(test_data_dir):
         )
 
 
+MID_AZIMUTH = object()
+
+
 # fmt: off
 @pytest.mark.parametrize(
     "geometry, slice_no, operation_name, operation_args, axis",
     [
         pytest.param("spherical_3d", 1, "azimuthal_at_phi", (np.pi,), "r"),
         pytest.param("spherical_3d", 1, "azimuthal_at_phi", (np.pi,), "theta"),
-        pytest.param("spherical_3d", 1, "azimuthal_at_phi", (np.pi,), "phi", marks=pytest.mark.xfail(strict=True, reason="known bug in azimuthal_at_phi")),
+        pytest.param("spherical_3d", 1, "azimuthal_at_phi", (MID_AZIMUTH,), "phi"),
         pytest.param("spherical_3d", 2, "vertical_at_midplane", (), "r"),
         pytest.param("spherical_3d", 2, "vertical_at_midplane", (), "theta"),
         pytest.param("spherical_3d", 2, "vertical_at_midplane", (), "phi"),
@@ -226,7 +229,7 @@ def test_api_fluid_uidefix(test_data_dir):
         pytest.param("spherical_3d", 4, "azimuthal_average", (), "phi", marks=pytest.mark.xfail(strict=True, reason="known bug in azimuthal_average")),
 
         pytest.param("polar_3d", 1, "azimuthal_at_phi", (np.pi,), "R"),
-        pytest.param("polar_3d", 1, "azimuthal_at_phi", (np.pi,), "phi", marks=pytest.mark.xfail(strict=True, reason="known bug in azimuthal_at_phi")),
+        pytest.param("polar_3d", 1, "azimuthal_at_phi", (MID_AZIMUTH,), "phi"),
         pytest.param("polar_3d", 1, "azimuthal_at_phi", (np.pi,), "z"),
         pytest.param("polar_3d", 2, "vertical_at_midplane", (), "R"),
         pytest.param("polar_3d", 2, "vertical_at_midplane", (), "phi"),
@@ -247,11 +250,19 @@ def test_api_vtk_slices_uidefix(test_data_dir, geometry, slice_no, operation_nam
         test_data_dir / "idefix_vtk_slices" / geometry / f"slice{slice_no}.{on:04d}.vtk"
     )
     method = getattr(ds["RHO"], operation_name)
+    if operation_args == (MID_AZIMUTH,):
+        operation_args = (np.pi,)
+        period = 2 * np.pi
+    else:
+        period = None
     rho_slice_pp = method(*operation_args)
     rho_slice_cut = ds_phi_cut["RHO"]
     np.testing.assert_array_almost_equal(rho_slice_pp.data, rho_slice_cut.data)
 
-    np.testing.assert_array_almost_equal(
-        rho_slice_pp.coordinates.get_axis_array(axis),
-        rho_slice_cut.coordinates.get_axis_array(axis),
-    )
+    actual = rho_slice_pp.coordinates.get_axis_array(axis)
+    desired = rho_slice_cut.coordinates.get_axis_array(axis)
+    if period is not None:
+        actual = np.mod(actual, period)
+        desired = np.mod(desired, period)
+
+    np.testing.assert_array_almost_equal(actual, desired)
