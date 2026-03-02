@@ -512,6 +512,7 @@ class Field(Generic[F]):
 
 
 class GasFieldReplaceKwargs(Generic[F], TypedDict, total=False):
+    _field: Field[F]
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
@@ -686,8 +687,13 @@ class GasField(Generic[F]):
         for k in ["name", "data", "coordinates"]:
             if k in subs_cpy:
                 field_kws[k] = subs.pop(k)  # type: ignore[literal-required, misc]
+        if field_kws:
+            if "_field" in subs:
+                raise TypeError
+            new._field = self._field.replace(**field_kws)
+        else:
+            new._field = subs.get("_field", self._field)
 
-        new._field = self._field.replace(**field_kws)
         new._loader = self._loader
         new._snapshot_uid = subs.get("snapshot_uid", self._snapshot_uid)
         new._operation = subs.get("operation", self._operation)
@@ -1111,15 +1117,6 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        default_suffix = "vertical_projection"
-        if z is not None:
-            default_suffix += str(z)
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=default_suffix,
-            operation_name=operation_name,
-        )
-
         imid = self.find_ialt(0.0)
         match self.geometry:
             case Geometry.CARTESIAN:
@@ -1169,7 +1166,11 @@ class GasField(Generic[F]):
         return self.replace(
             data=ret_data.astype("float32", copy=False),
             coordinates=ret_coords,
-            operation=operation,
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"vertical_projection{z if z is not None else ''}",
+                operation_name=operation_name,
+            ),
         )
 
     def vertical_at_midplane(
@@ -1177,45 +1178,23 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix="vertical_at_midplane",
-            operation_name=operation_name,
-        )
-        imid = self.find_ialt(0.0)
         match self.geometry:
-            case Geometry.CARTESIAN:
-                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-                ret_coords = self.coordinates.project_along(
-                    Axis.CARTESIAN_Z, zmed[imid].item()
-                )
-                ret_data = self.data[:, :, imid].reshape(
-                    self.shape[0], self.shape[1], 1
-                )
-                # do geometry conversion!!! -> chainer la conversion (une fois que reduction de dimension -> conversion puis plot egalement chainable)
-            case Geometry.POLAR:
-                zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
-                ret_coords = self.coordinates.project_along(
-                    Axis.CARTESIAN_Z, zmed[imid].item()
-                )
-                ret_data = self.data[:, :, imid].reshape(
-                    self.shape[0], self.shape[1], 1
-                )
+            case Geometry.CARTESIAN | Geometry.POLAR:
+                axis = Axis.CARTESIAN_Z
             case Geometry.SPHERICAL:
-                thetamed = self.coordinates.get_axis_array_med(Axis.COLATITUDE)
-                ret_coords = self.coordinates.project_along(
-                    Axis.COLATITUDE, thetamed[imid].item()
-                )
-                ret_data = self.data[:, imid, :].reshape(
-                    self.shape[0], 1, self.shape[2]
-                )
+                axis = Axis.COLATITUDE
             case _ as unreachable:
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype(self.dtype, copy=False),
-            coordinates=ret_coords,
-            operation=operation,
+            _field=self._field.slice_at_index(
+                axis, self.find_ialt(0.0), keep_name=True
+            ),
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix="vertical_at_midplane",
+                operation_name=operation_name,
+            ),
         )
 
     def latitudinal_at_theta(
@@ -1224,18 +1203,8 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
-            operation_name=operation_name,
-        )
-
         imid = self.find_ialt(theta)
         match self.geometry:
-            case Geometry.CARTESIAN:
-                raise NotImplementedError(
-                    "latitudinal_at_theta is not implemented for cartesian geometry"
-                )
             case Geometry.POLAR:
                 data_at_theta = np.zeros((self.shape[0], self.shape[1]), dtype=">f4")
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
@@ -1264,13 +1233,19 @@ class GasField(Generic[F]):
                 ret_data = self.data[
                     :, closest_index(thetamed, np.pi / 2 - theta), :
                 ].reshape(self.shape[0], 1, self.shape[2])
+            case Geometry.CARTESIAN:
+                raise NotImplementedError
             case _ as unreachable:
                 assert_never(unreachable)
 
         return self.replace(
             data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
-            operation=operation,
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"latitudinal_at_theta{np.pi / 2 - theta}",
+                operation_name=operation_name,
+            ),
         )
 
     def vertical_at_z(
@@ -1279,40 +1254,21 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=f"vertical_at_z{z}",
-            operation_name=operation_name,
-        )
-        imid = self.find_imid(altitude=z)
         match self.geometry:
-            case Geometry.CARTESIAN:
-                zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-                ret_coords = self.coordinates.project_along(
-                    Axis.CARTESIAN_Z, zmed[imid].item()
-                )
-                ret_data = self.data[:, :, closest_index(zmed, z)].reshape(
-                    self.shape[0], self.shape[1], 1
-                )
-            case Geometry.POLAR:
-                zmed = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
-                ret_coords = self.coordinates.project_along(
-                    Axis.CARTESIAN_Z, zmed[imid].item()
-                )
-                ret_data = self.data[:, :, closest_index(zmed, z)].reshape(
-                    self.shape[0], self.shape[1], 1
-                )
+            case Geometry.CARTESIAN | Geometry.POLAR:
+                axis = Axis.CARTESIAN_Z
             case Geometry.SPHERICAL:
-                raise NotImplementedError(
-                    "vertical at z in spherical coordinates not implemented yet."
-                )
+                raise NotImplementedError
             case _ as unreachable:
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype(self.dtype, copy=False),
-            coordinates=ret_coords,
-            operation=operation,
+            _field=self._field.slice_at_index(axis, self.find_ialt(z), keep_name=True),
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"vertical_at_z{z}",
+                operation_name=operation_name,
+            ),
         )
 
     def azimuthal_at_phi(
@@ -1321,40 +1277,23 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=f"azimuthal_at_phi{phi}",
-            operation_name=operation_name,
-        )
-        iphi = self.find_iphi(phi=phi)
         match self.geometry:
+            case Geometry.POLAR | Geometry.SPHERICAL:
+                axis = Axis.AZIMUTH
             case Geometry.CARTESIAN:
-                raise NotImplementedError(
-                    f"geometry flag '{self.geometry}' not implemented yet for azimuthal_at_phi"
-                )
-            case Geometry.POLAR:
-                phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
-                ret_coords = self.coordinates.project_along(
-                    Axis.AZIMUTH, phimed[iphi].item()
-                )
-                ret_data = self.data[:, iphi, :].reshape(
-                    self.shape[0], 1, self.shape[2]
-                )
-            case Geometry.SPHERICAL:
-                phimed = self.coordinates.get_axis_array(Axis.AZIMUTH)
-                ret_coords = self.coordinates.project_along(
-                    Axis.AZIMUTH, phimed[iphi].item()
-                )
-                ret_data = self.data[:, :, iphi].reshape(
-                    self.shape[0], self.shape[1], 1
-                )
+                raise NotImplementedError
             case _ as unreachable:
                 assert_never(unreachable)
 
         return self.replace(
-            data=ret_data.astype(self.dtype, copy=False),
-            coordinates=ret_coords,
-            operation=operation,
+            _field=self._field.slice_at_index(
+                axis, self.find_iphi(phi=phi), keep_name=True
+            ),
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"azimuthal_at_phi{phi}",
+                operation_name=operation_name,
+            ),
         )
 
     def azimuthal_at_planet(
@@ -1364,28 +1303,22 @@ class GasField(Generic[F]):
         planet_file: str | None = None,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        planet_file = _resolve_planet_file(
-            planet_number=planet_number, planet_file=planet_file
+        return self.azimuthal_at_phi(
+            phi=self.find_phip(
+                planet_file=_resolve_planet_file(
+                    planet_number=planet_number,
+                    planet_file=planet_file,
+                )
+            )
+        ).replace(
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix="azimuthal_at_planet",
+                operation_name=operation_name,
+            )
         )
-        del planet_number
-
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix="azimuthal_at_planet",
-            operation_name=operation_name,
-        )
-
-        phip = self.find_phip(planet_file=planet_file)
-        aziphip = self.azimuthal_at_phi(phi=phip)
-        return aziphip.replace(operation=operation)
 
     def azimuthal_average(self, *, operation_name: str | None = None) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix="azimuthal_average",
-            operation_name=operation_name,
-        )
-
         iphi = self.find_iphi(phi=0)
         match self.geometry:
             case Geometry.CARTESIAN:
@@ -1414,7 +1347,11 @@ class GasField(Generic[F]):
         return self.replace(
             data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
-            operation=operation,
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix="azimuthal_average",
+                operation_name=operation_name,
+            ),
         )
 
     def remove_planet_hill_band(
@@ -1428,12 +1365,6 @@ class GasField(Generic[F]):
             planet_number=planet_number, planet_file=planet_file
         )
         del planet_number
-
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix="remove_planet_hill_band",
-            operation_name=operation_name,
-        )
 
         phip = self.find_phip(planet_file=planet_file)
         rp = self.find_rp(planet_file=planet_file)
@@ -1473,7 +1404,11 @@ class GasField(Generic[F]):
         return self.replace(
             data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
-            operation=operation,
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix="remove_planet_hill_band",
+                operation_name=operation_name,
+            ),
         )
 
     def radial_at_r(
@@ -1482,36 +1417,25 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=f"radial_at_r{distance}",
-            operation_name=operation_name,
-        )
-
-        ir1 = self.find_ir(distance=distance)
         match self.geometry:
-            case Geometry.CARTESIAN:
-                raise NotImplementedError(
-                    f"geometry flag '{self.geometry}' not implemented yet for radial_at_r"
-                )
             case Geometry.POLAR:
-                rmed = self.coordinates.get_axis_array_med(Axis.CYLINDRICAL_RADIUS)
-                ret_coords = self.coordinates.project_along(
-                    Axis.CYLINDRICAL_RADIUS, rmed[ir1].item()
-                )
+                axis = Axis.CYLINDRICAL_RADIUS
             case Geometry.SPHERICAL:
-                rmed = self.coordinates.get_axis_array_med(Axis.SPHERICAL_RADIUS)
-                ret_coords = self.coordinates.project_along(
-                    Axis.SPHERICAL_RADIUS, rmed[ir1].item()
-                )
+                axis = Axis.SPHERICAL_RADIUS
+            case Geometry.CARTESIAN:
+                raise NotImplementedError
             case _ as unreachable:
                 assert_never(unreachable)
 
-        ret_data = self.data[ir1, :, :].reshape(1, self.shape[1], self.shape[2])
         return self.replace(
-            data=ret_data.astype(self.dtype, copy=False),
-            coordinates=ret_coords,
-            operation=operation,
+            _field=self._field.slice_at_index(
+                axis, self.find_ir(distance=distance), keep_name=True
+            ),
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"radial_at_r{distance}",
+                operation_name=operation_name,
+            ),
         )
 
     def radial_average_interval(
@@ -1521,12 +1445,6 @@ class GasField(Generic[F]):
         *,
         operation_name: str | None = None,
     ) -> "GasField[F]":
-        operation = self._resolve_operation_name(
-            prefix=self._operation,
-            default_suffix=f"radial_average_interval_{vmin}_{vmax}",
-            operation_name=operation_name,
-        )
-
         irmin = self.find_ir(distance=vmin)
         irmax = self.find_ir(distance=vmax)
         ir = self.find_ir(distance=(vmax - vmin) / 2)
@@ -1554,7 +1472,11 @@ class GasField(Generic[F]):
         return self.replace(
             data=ret_data.astype(self.dtype, copy=False),
             coordinates=ret_coords,
-            operation=operation,
+            operation=self._resolve_operation_name(
+                prefix=self._operation,
+                default_suffix=f"radial_average_interval_{vmin}_{vmax}",
+                operation_name=operation_name,
+            ),
         )
 
     def diff(self, on_2: int) -> "GasField[F]":
@@ -1587,8 +1509,6 @@ class GasField(Generic[F]):
                 snapshot_uid=self.snapshot_uid,
             ),
         )
-
-        operation = self._operation
         if self.effective_ndim < 2:
             raise ValueError("data has to be 2D or 3D in order to rotate the data.")
         if not _fequal(self._rotate_by, rotate_by):
@@ -1609,10 +1529,7 @@ class GasField(Generic[F]):
         else:
             ret_data = self.data
 
-        return self.replace(
-            data=ret_data.astype(self.dtype, copy=False),
-            operation=operation,
-        )
+        return self.replace(data=ret_data.astype(self.dtype, copy=False))
 
 
 class GasDataSet(Generic[D, F]):
