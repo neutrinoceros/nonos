@@ -7,7 +7,7 @@ import numpy.testing as npt
 import pytest
 from pytest import RaisesExc, RaisesGroup
 
-from nonos._geometry import Coordinates, Geometry
+from nonos._geometry import AutoIndex, Axis, Coordinates, Geometry
 from nonos.api import GasDataSet, file_analysis
 from nonos.api.analysis import Field
 
@@ -164,6 +164,25 @@ def test_field_arithemtic(stub_field, op, operand):
             true_operand = operand
     npt.assert_array_equal(res1.as_3dview(), op(stub_field.data, true_operand))
     npt.assert_array_equal(res2.as_3dview(), op(true_operand, stub_field.data))
+
+
+@pytest.mark.parametrize("axis", [Axis.CARTESIAN_X, Axis.CARTESIAN_Y, Axis.CARTESIAN_Z])
+@pytest.mark.parametrize(
+    "idx", [0, -1, -2, 1, AutoIndex.LEFTMOST, AutoIndex.RIGHTMOST, AutoIndex.MIDPOINT]
+)
+@pytest.mark.parametrize("keep_name", [True, False])
+def test_field_slice(stub_field, axis, idx, keep_name):
+    f = stub_field
+    assert f.effective_ndim == 3
+
+    s = f.slice_at_index(axis, idx, keep_name=keep_name)
+    assert s.effective_ndim == 2
+    if keep_name:
+        assert s.name == f.name
+    else:
+        assert s.name == "<slice-result>"
+
+    assert s.slice_at_index(axis, AutoIndex.MIDPOINT, keep_name=True) == s
 
 
 class TestFileAnalysis:

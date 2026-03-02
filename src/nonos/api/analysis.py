@@ -29,6 +29,7 @@ from matplotlib.ticker import SymmetricalLogLocator
 from numpy import float32 as f32, float64 as f64
 
 from nonos._geometry import (
+    AutoIndex,
     Axis,
     Coordinates,
     Geometry,
@@ -440,6 +441,19 @@ class Field(Generic[F]):
             coordinates=self.coordinates.astype(dtype),
         )
 
+    def __eq__(self, other: Any) -> bool:
+        # checks are ordered from cheapest to most expensive
+        # so False is returned as early as possible when other
+        # is not comparable
+        return other is self or (
+            type(other) is Field
+            and self.name == other.name
+            and self.coordinates == other.coordinates
+            and bool(other.data is self.data or np.all(other.data == self.data))
+        )
+
+    # low level arithmetic
+
     # despite my best effort, type checkers (mypy and ty) do not
     # seem able to infer that these decorated methods are in fact
     # type-safe: their real bodies live in the decorator's implementation
@@ -459,6 +473,42 @@ class Field(Generic[F]):
     def __truediv__(self, other: Any) -> "Field[F]": ...  # type: ignore
     @_arithmetic_field_operator(op.truediv, "<truediv-result>", reverse_operands=True)
     def __rtruediv__(self, other: Any) -> "Field[F]": ...  # type: ignore
+
+    # medium level methods:
+    # - an axis must always be specified
+    # - any axis from the field's geometry is considered valid, all others are invalid
+    # - indices (deltas) must be provided as exact integer values
+    # - output names should reflect the operation conducted (e.g. <slice-result>)
+
+    # reductions: methods that reduce effective_ndim
+    # these should all be idempotents
+    def slice_at_index(
+        self,
+        axis: Axis,
+        idx: int | AutoIndex,
+        /,
+        *,
+        keep_name: bool = False,
+    ) -> "Field[F]":
+        sel: list[slice[None] | int] = [slice(None), slice(None), slice(None)]
+        axis_idx = self.coordinates.get_axis_index(axis)
+        match idx:
+            case AutoIndex.LEFTMOST:
+                idx = 0
+            case AutoIndex.RIGHTMOST:
+                idx = -1
+            case AutoIndex.MIDPOINT:
+                idx = self.shape[axis_idx] // 2
+
+        sel[axis_idx] = idx
+        new_shape = list(self.shape)
+        new_shape[axis_idx] = 1
+
+        return Field(
+            name=self.name if keep_name else "<slice-result>",
+            data=self.data[tuple(sel)].reshape(new_shape),  # type: ignore[arg-type]
+            coordinates=self.coordinates.slice_at_index(axis, idx),
+        )
 
 
 class GasFieldReplaceKwargs(Generic[F], TypedDict, total=False):
