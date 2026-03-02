@@ -916,7 +916,7 @@ class GasField(Generic[F]):
             case _ as unreachable:
                 assert_never(unreachable)
 
-    def find_imid(self, altitude: float = 0.0) -> int:
+    def find_ialt(self, altitude: float, /) -> int:
         match self.geometry:
             case Geometry.CARTESIAN | Geometry.POLAR:
                 arr = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
@@ -926,6 +926,13 @@ class GasField(Generic[F]):
                 return closest_index(arr, np.pi / 2 - altitude)
             case _ as unreachable:
                 assert_never(unreachable)
+
+    @deprecated(
+        "GasField.find_imid is deprecated since v0.21.0 and "
+        "might be removed in a future version. Use GasField.find_ialt instead."
+    )
+    def find_imid(self, altitude: float = 0.0) -> int:  # pragma: no cover
+        return self.find_ialt(altitude)
 
     def find_iphi(self, phi: float = 0) -> int:
         match self.geometry:
@@ -1020,7 +1027,7 @@ class GasField(Generic[F]):
             operation_name=operation_name,
         )
 
-        imid = self.find_imid()
+        imid = self.find_ialt(0.0)
         match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
@@ -1113,7 +1120,7 @@ class GasField(Generic[F]):
             operation_name=operation_name,
         )
 
-        imid = self.find_imid()
+        imid = self.find_ialt(0.0)
         match self.geometry:
             case Geometry.CARTESIAN:
                 zarr = self.coordinates.get_axis_array(Axis.CARTESIAN_Z)
@@ -1175,7 +1182,7 @@ class GasField(Generic[F]):
             default_suffix="vertical_at_midplane",
             operation_name=operation_name,
         )
-        imid = self.find_imid()
+        imid = self.find_ialt(0.0)
         match self.geometry:
             case Geometry.CARTESIAN:
                 zmed = self.coordinates.get_axis_array_med(Axis.CARTESIAN_Z)
@@ -1223,7 +1230,7 @@ class GasField(Generic[F]):
             operation_name=operation_name,
         )
 
-        imid = self.find_imid(altitude=theta)
+        imid = self.find_ialt(theta)
         match self.geometry:
             case Geometry.CARTESIAN:
                 raise NotImplementedError(
