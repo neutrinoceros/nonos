@@ -139,20 +139,21 @@ def test_nonoslick_method(method, tmp_path):
         )
         for name, arr in [("Vx", fake_Vx), ("Vy", fake_Vy), ("F", fake_F)]
     ]
-    lick = NonosLick(
-        xxmed,
-        yymed,
-        Vx,
-        Vy,
-        F,
-        xmin=xxedge.min(),
-        xmax=xxedge.max(),
-        ymin=yyedge.min(),
-        ymax=yyedge.max(),
-        niter_lic=1,
-        size_interpolated=50 * root_size,
-        method=method,
-    )
+    with pytest.deprecated_call():
+        lick = NonosLick(
+            xxmed,
+            yymed,
+            Vx,
+            Vy,
+            F,
+            xmin=xxedge.min(),
+            xmax=xxedge.max(),
+            ymin=yyedge.min(),
+            ymax=yyedge.max(),
+            niter_lic=1,
+            size_interpolated=50 * root_size,
+            method=method,
+        )
     fig = Figure()
     ax = fig.add_subplot()
     lick.plot(
