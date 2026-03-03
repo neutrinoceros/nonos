@@ -76,6 +76,11 @@ class F2DViewer(Generic[F], Protocol):  # type: ignore[misc]
     def as_2dview(self) -> FArray2D[F]: ...
 
 
+@deprecated(
+    "nonos.stallite.NonosLick is deprecated since v0.21.0 "
+    "and might be removed in a future version. "
+    "You are encouraged to use the lick library directly instead."
+)
 class NonosLick(Generic[F]):
     def __init__(
         self,
