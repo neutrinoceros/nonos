@@ -13,6 +13,7 @@ from nonos._geometry import (
     Axis,
     Coordinates,
     Geometry,
+    IndexRange,
     _get_target_geometry,
     _native_axis_from_target_axis,
     _native_plane_from_target_plane,
@@ -207,6 +208,53 @@ def test_periodic_shift(subtests):
     with subtests.test("z"):
         c3 = c0.periodic_shift(Axis.CARTESIAN_Z, by=20)
         assert c3 == replace(c0, x3=np.roll(x3, shift=20))
+
+
+def test_index_range_as_slice():
+    ir = IndexRange(lo=1, hi=5)
+    assert ir.as_slice() == slice(1, 5)
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected_msg",
+    [
+        ({"lo": -1}, "Expected lo>=0, got lo=-1"),
+        ({"lo": -1, "hi": 2}, "Expected lo>=0, got lo=-1"),
+        ({"lo": 1, "hi": 0}, "Expected hi>0, got hi=0"),
+        ({"hi": 0}, "Expected hi>0, got hi=0"),
+        ({"lo": 5, "hi": 4}, "Expected lo<hi, got lo=5, hi=4"),
+    ],
+)
+def test_index_range_invalid_input(kwargs, expected_msg):
+    with pytest.raises(ValueError, match=expected_msg):
+        IndexRange(**kwargs)
+
+
+def test_logical_slab(subtests):
+    x1 = np.linspace(-1, 1, 10)
+    x2 = np.linspace(-2, 2, 20)
+    x3 = np.linspace(-3_000, 4_000, 300_000)
+    c0 = Coordinates(Geometry.CARTESIAN, x1, x2, x3)
+
+    with subtests.test("x1"):
+        c1 = c0.select_logical_slab(x1=IndexRange(hi=8))
+        assert c1 == replace(c0, x1=x1[:8])
+
+    with subtests.test("x1, x2"):
+        c2 = c0.select_logical_slab(
+            x1=IndexRange(hi=8),
+            x2=IndexRange(lo=18, hi=19),
+        )
+        assert c2 == replace(c0, x1=x1[:8], x2=np.full(2, x2[18], dtype=x2.dtype))
+
+    with subtests.test("x2, x3"):
+        c3 = c0.select_logical_slab(
+            x2=IndexRange(lo=18, hi=19),
+            x3=IndexRange(lo=1000, hi=1010),
+        )
+        assert c3 == replace(
+            c0, x2=np.full(2, x2[18], dtype=x2.dtype), x3=x3[1000:1010]
+        )
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
