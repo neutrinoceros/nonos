@@ -78,37 +78,23 @@ class AutoIndex(Enum):
     MIDPOINT = auto()
 
 
-@dataclass(slots=True, frozen=True, kw_only=True)
+@dataclass(slots=True, frozen=True)
 class IndexRange:
-    lo: int | Literal[AutoIndex.LEFTMOST] = AutoIndex.LEFTMOST
-    hi: int | Literal[AutoIndex.RIGHTMOST] = AutoIndex.RIGHTMOST
+    start: int | None = None
+    stop: int | None = None
 
     def __post_init__(self) -> None:
-        stop: int | None
-        match self.hi:
-            case AutoIndex.RIGHTMOST:
-                stop = None
-            case int(hi) if hi <= 0:
-                raise ValueError(f"Expected hi>0, got {hi=}")
-            case _:
-                stop = self.hi
+        if (stop := self.stop) is not None and stop <= 0:
+            raise ValueError(f"Expected stop>0, got {stop=}")
 
-        start: int | None
-        match self.lo:
-            case AutoIndex.LEFTMOST:
-                start = None
-            case int(lo) if lo < 0:
-                raise ValueError(f"Expected lo>=0, got {lo=}")
-            case _:
-                start = self.lo
+        if (start := self.start) is not None and start < 0:
+            raise ValueError(f"Expected start>=0, got {start=}")
 
         if start is not None and stop is not None and stop < start:
-            raise ValueError(f"Expected lo<hi, got {lo=}, {hi=}")
+            raise ValueError(f"Expected start<stop, got {start=}, {stop=}")
 
     def as_slice(self) -> slice:
-        start = None if self.lo is AutoIndex.LEFTMOST else self.lo
-        stop = None if self.hi is AutoIndex.RIGHTMOST else self.hi
-        return slice(start, stop)
+        return slice(self.start, self.stop)
 
 
 SELECT_ALL = IndexRange()

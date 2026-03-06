@@ -211,18 +211,18 @@ def test_periodic_shift(subtests):
 
 
 def test_index_range_as_slice():
-    ir = IndexRange(lo=1, hi=5)
+    ir = IndexRange(1, 5)
     assert ir.as_slice() == slice(1, 5)
 
 
 @pytest.mark.parametrize(
     "kwargs, expected_msg",
     [
-        ({"lo": -1}, "Expected lo>=0, got lo=-1"),
-        ({"lo": -1, "hi": 2}, "Expected lo>=0, got lo=-1"),
-        ({"lo": 1, "hi": 0}, "Expected hi>0, got hi=0"),
-        ({"hi": 0}, "Expected hi>0, got hi=0"),
-        ({"lo": 5, "hi": 4}, "Expected lo<hi, got lo=5, hi=4"),
+        ({"start": -1}, "Expected start>=0, got start=-1"),
+        ({"start": -1, "stop": 2}, "Expected start>=0, got start=-1"),
+        ({"start": 1, "stop": 0}, "Expected stop>0, got stop=0"),
+        ({"stop": 0}, "Expected stop>0, got stop=0"),
+        ({"start": 5, "stop": 4}, "Expected start<stop, got start=5, stop=4"),
     ],
 )
 def test_index_range_invalid_input(kwargs, expected_msg):
@@ -237,20 +237,20 @@ def test_logical_slab(subtests):
     c0 = Coordinates(Geometry.CARTESIAN, x1, x2, x3)
 
     with subtests.test("x1"):
-        c1 = c0.select_logical_slab(x1=IndexRange(hi=8))
+        c1 = c0.select_logical_slab(x1=IndexRange(stop=8))
         assert c1 == replace(c0, x1=x1[:8])
 
     with subtests.test("x1, x2"):
         c2 = c0.select_logical_slab(
-            x1=IndexRange(hi=8),
-            x2=IndexRange(lo=18, hi=19),
+            x1=IndexRange(stop=8),
+            x2=IndexRange(start=18, stop=19),
         )
         assert c2 == replace(c0, x1=x1[:8], x2=np.full(2, x2[18], dtype=x2.dtype))
 
     with subtests.test("x2, x3"):
         c3 = c0.select_logical_slab(
-            x2=IndexRange(lo=18, hi=19),
-            x3=IndexRange(lo=1000, hi=1010),
+            x2=IndexRange(start=18, stop=19),
+            x3=IndexRange(start=1000, stop=1010),
         )
         assert c3 == replace(
             c0, x2=np.full(2, x2[18], dtype=x2.dtype), x3=x3[1000:1010]
