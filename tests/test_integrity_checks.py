@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from pytest import RaisesExc, RaisesGroup
 
-from nonos._geometry import Coordinates, Geometry
+from nonos._geometry import Coordinates
 from nonos._integrity_checks import (
     check_field_operands,
     collect_dtype_exceptions,
@@ -15,6 +15,7 @@ from nonos._integrity_checks import (
     compile_exceptions,
 )
 from nonos.api.analysis import Field
+from nonos.geometry import Geometry
 
 if sys.version_info >= (3, 13):
     from copy import replace

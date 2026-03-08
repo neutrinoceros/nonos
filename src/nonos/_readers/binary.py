@@ -13,8 +13,8 @@ from typing import Any, final
 
 import numpy as np
 
-from nonos._geometry import Geometry
 from nonos._types import BinData, F, FArray, FArray1D, FArray3D
+from nonos.geometry import Geometry
 
 if sys.version_info >= (3, 11):
     from typing import assert_never

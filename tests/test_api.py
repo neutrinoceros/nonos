@@ -7,9 +7,10 @@ import numpy.testing as npt
 import pytest
 from pytest import RaisesExc, RaisesGroup
 
-from nonos._geometry import AutoIndex, Axis, Coordinates, Geometry
+from nonos._geometry import AutoIndex, Coordinates
 from nonos.api import GasDataSet, file_analysis
 from nonos.api.analysis import Field
+from nonos.geometry import Axis, Geometry
 
 
 @pytest.fixture
