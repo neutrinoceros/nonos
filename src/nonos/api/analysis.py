@@ -28,13 +28,7 @@ from matplotlib.scale import SymmetricalLogTransform
 from matplotlib.ticker import SymmetricalLogLocator
 from numpy import float32 as f32, float64 as f64
 
-from nonos._geometry import (
-    AutoIndex,
-    Axis,
-    Coordinates,
-    Geometry,
-    axes_from_geometry,
-)
+from nonos._geometry import AutoIndex, Coordinates
 from nonos._integrity_checks import (
     check_field_operands,
     collect_dtype_exceptions,
@@ -60,6 +54,7 @@ from nonos.api._angle_parsing import (
     _resolve_rotate_by,
 )
 from nonos.api.tools import bracketing_values, closest_index, closest_value
+from nonos.geometry import Axis, Geometry
 from nonos.loaders import BUILTIN_RECIPES, Loader
 
 if sys.version_info >= (3, 11):
@@ -847,7 +842,7 @@ class GasField(Generic[F]):
             # while preserving the original (cyclic) order in the other two axes
             data_view = rotate_axes(data_view, shift=self.shape.index(1)).squeeze()
 
-            naxes = axes_from_geometry(self.geometry)
+            naxes = self.geometry.axes
             sorted_pairs = [
                 (naxes[0], naxes[1]),
                 (naxes[1], naxes[2]),

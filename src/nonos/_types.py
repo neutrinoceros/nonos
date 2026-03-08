@@ -43,7 +43,7 @@ else:
     from typing_extensions import Self, assert_never
 
 if TYPE_CHECKING:
-    from nonos._geometry import Geometry
+    from nonos.geometry import Geometry
 
 StrDict: TypeAlias = dict[str, Any]
 

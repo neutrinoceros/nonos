@@ -12,6 +12,7 @@ from matplotlib.figure import Figure
 from nonos._geometry import Coordinates
 from nonos.api import GasDataSet, NonosLick
 from nonos.api.analysis import Field
+from nonos.geometry import Geometry
 from nonos.styling import set_mpl_style
 
 
@@ -106,7 +107,7 @@ def test_3D_vm_xy(test_data_dir, temp_figure_and_axis):
 def test_nonoslick_method(method, tmp_path):
     root_size = 2
     fake_grid = {
-        "geometry": "cartesian",
+        "geometry": Geometry.CARTESIAN,
         "x1": np.linspace(0, 1, root_size + 1),
         "x2": np.linspace(0, 1, root_size + 1),
         "x3": np.array([1.0]),

@@ -6,7 +6,6 @@ __all__ = [
     "Coordinates",
     "Geometry",
     "IndexRange",
-    "axes_from_geometry",
 ]
 import sys
 from dataclasses import dataclass
@@ -39,6 +38,27 @@ class Geometry(StrEnum):
     CARTESIAN = auto()
     POLAR = auto()
     SPHERICAL = auto()
+
+    @property
+    def axes(self) -> tuple[Axis, Axis, Axis]:
+        match self:
+            case Geometry.CARTESIAN:
+                return (Axis.CARTESIAN_X, Axis.CARTESIAN_Y, Axis.CARTESIAN_Z)
+            case Geometry.POLAR:
+                return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH, Axis.CARTESIAN_Z)
+            case Geometry.SPHERICAL:
+                return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE, Axis.AZIMUTH)
+            case _ as unreachable:
+                assert_never(unreachable)
+
+
+@deprecated(
+    "nonos._geometry.axes_from_geometry is deprecated since v0.21.0 "
+    "and may be removed in a future version. "
+    "Use Geometry.axes instead."
+)
+def axes_from_geometry(geometry: Geometry, /) -> tuple[Axis, Axis, Axis]:
+    return geometry.axes
 
 
 class Axis(Enum):
@@ -100,18 +120,6 @@ class IndexRange:
 SELECT_ALL = IndexRange()
 
 
-def axes_from_geometry(geometry: Geometry, /) -> tuple[Axis, Axis, Axis]:
-    match geometry:
-        case Geometry.CARTESIAN:
-            return (Axis.CARTESIAN_X, Axis.CARTESIAN_Y, Axis.CARTESIAN_Z)
-        case Geometry.POLAR:
-            return (Axis.CYLINDRICAL_RADIUS, Axis.AZIMUTH, Axis.CARTESIAN_Z)
-        case Geometry.SPHERICAL:
-            return (Axis.SPHERICAL_RADIUS, Axis.COLATITUDE, Axis.AZIMUTH)
-        case _ as unreachable:
-            assert_never(unreachable)
-
-
 def _get_target_geometry(*axes: Axis) -> Geometry:
     axes_set = set(axes)
     if len(axes_set) == 0 or len(axes_set) > 3:
@@ -119,7 +127,7 @@ def _get_target_geometry(*axes: Axis) -> Geometry:
 
     candidates: set[Geometry] = set()
     for geom in Geometry:
-        if set(axes_from_geometry(geom)).issuperset(axes_set):
+        if set(geom.axes).issuperset(axes_set):
             candidates.add(geom)
 
     if len(candidates) == 0:
@@ -135,7 +143,7 @@ def _native_axis_from_target_axis(
     native_geometry: Geometry,
     axis: Axis,
 ) -> Axis:
-    if axis in axes_from_geometry(native_geometry):
+    if axis in native_geometry.axes:
         return axis
 
     match native_geometry, axis:
@@ -198,7 +206,7 @@ def _native_plane_from_target_plane(
     # geometry to project to a well-defined plane in another geometry.
 
     input_tuple = (axis_1, axis_2)
-    if set(input_tuple).issubset(axes_from_geometry(native_geometry)):
+    if set(input_tuple).issubset(native_geometry.axes):
         return input_tuple
 
     match native_geometry, input_tuple:
@@ -335,7 +343,7 @@ class Coordinates(Generic[F]):
 
     @property
     def axes(self) -> tuple[Axis, Axis, Axis]:
-        return axes_from_geometry(self.geometry)
+        return self.geometry.axes
 
     def get_axis_index(self, axis: Axis) -> int:
         axes = list(self.axes)
@@ -487,7 +495,7 @@ class Coordinates(Generic[F]):
     def _meshgrid_reduction(self, axis_1, axis_2, /):  # type: ignore[no-untyped-def]
         # TODO: this could easily be split into 2 functions (one for each dimensions)
         axes = axis_1, axis_2
-        gaxes = axes_from_geometry(self.geometry)
+        gaxes = self.geometry.axes
         if axis_1 not in gaxes:
             raise ValueError(f"expected one of {gaxes}, got {axis_1}")
         if axis_2 is not None and axis_2 not in gaxes:

@@ -10,15 +10,13 @@ from nonos._geometry import (
     _AXIS_TO_STR,
     _STR_TO_AXIS,
     AutoIndex,
-    Axis,
     Coordinates,
-    Geometry,
     IndexRange,
     _get_target_geometry,
     _native_axis_from_target_axis,
     _native_plane_from_target_plane,
-    axes_from_geometry,
 )
+from nonos.geometry import Axis, Geometry
 
 if sys.version_info >= (3, 13):
     from copy import replace
@@ -30,10 +28,7 @@ else:
     "axes, expected_geometry",
     list(
         chain.from_iterable(
-            [
-                [(axes, g) for axes in combinations(axes_from_geometry(g), 2)]
-                for g in Geometry
-            ]
+            [[(axes, g) for axes in combinations(g.axes, 2)] for g in Geometry]
         )
     ),
 )
@@ -43,10 +38,7 @@ def test_get_target_geometry(axes, expected_geometry):
     assert _get_target_geometry(ax2, ax1) is expected_geometry
 
 
-@pytest.mark.parametrize(
-    "axis",
-    set(chain.from_iterable(axes_from_geometry(g) for g in Geometry)),
-)
+@pytest.mark.parametrize("axis", set(chain.from_iterable(g.axes for g in Geometry)))
 @pytest.mark.parametrize("native_geometry", Geometry)
 def test_native_axis_from_target_axis(native_geometry, axis):
     try:
@@ -54,12 +46,12 @@ def test_native_axis_from_target_axis(native_geometry, axis):
     except NotImplementedError:
         pytest.skip("not a real issue, but let's make it visible")
     else:
-        assert axo in axes_from_geometry(native_geometry)
+        assert axo in native_geometry.axes
 
 
 @pytest.mark.parametrize(
     "axes",
-    list(chain.from_iterable(combinations(axes_from_geometry(g), 2) for g in Geometry)),
+    list(chain.from_iterable(combinations(g.axes, 2) for g in Geometry)),
 )
 @pytest.mark.parametrize("native_geometry", Geometry)
 def test_native_plane_from_target_plane(native_geometry, axes):
@@ -70,7 +62,7 @@ def test_native_plane_from_target_plane(native_geometry, axes):
         pytest.skip("not a real issue, but let's make it visible")
     else:
         assert axo1 != axi2
-        assert {axo1, axo2}.issubset(axes_from_geometry(native_geometry))
+        assert {axo1, axo2}.issubset(native_geometry.axes)
 
         # also check that swapping inputs results in swapped outputs
         res2 = _native_plane_from_target_plane(native_geometry, axi2, axi1)
@@ -142,10 +134,9 @@ def test_coordinates_invalid_ndim(x1, x2, x3):
     ],
 )
 def test_deprecated_coordinates_array_accesses(geometry):
-    axes = axes_from_geometry(geometry)
     x = np.linspace(0, 1, 5)  # should be valid in any axis
     coords = Coordinates(geometry, x, x, x)
-    for axis in axes:
+    for axis in geometry.axes:
         attr = axis.label
         with pytest.deprecated_call():
             arr = getattr(coords, attr)
