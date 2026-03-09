@@ -89,7 +89,7 @@ class BinData(Generic[F]):
                     for field in cls.__dataclass_fields__.values()
                 }
                 | {"dtype": dtype, "data": {}}
-            )
+            )  # ty:ignore[invalid-argument-type]
         )
 
     def finalize(self) -> Self:
