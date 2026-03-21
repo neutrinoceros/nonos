@@ -2,7 +2,6 @@
 [![PyPI](https://img.shields.io/pypi/v/nonos.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/nonos/)
 [![Supported Python Versions](https://img.shields.io/pypi/pyversions/nonos)](https://pypi.org/project/nonos/)
 [![Documentation Status](https://readthedocs.org/projects/nonos/badge/?version=latest)](https://nonos.readthedocs.io/en/latest/?badge=latest)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 `nonos` is a Python 2D visualization library for planet-disk numerical simulations.
 
