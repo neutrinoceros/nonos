@@ -108,7 +108,7 @@ class NonosLick(Generic[F]):
 
         lick_box_kwargs: StrDict
         if Version(version("lick")) >= Version("0.10.0dev0"):
-            from lick import lick_box  # type: ignore[attr-defined]
+            from lick import lick_box
 
             lick_box_kwargs = {
                 "kernel": np.sin(np.linspace(0, np.pi, kernel_length, endpoint=False)),
@@ -116,7 +116,7 @@ class NonosLick(Generic[F]):
                 "indexing": "xy",
             }
         else:
-            from lick.lick import lick_box
+            from lick.lick import lick_box  # type: ignore[import-not-found, no-redef]
 
             lick_box_kwargs = {
                 "kernel_length": kernel_length,
