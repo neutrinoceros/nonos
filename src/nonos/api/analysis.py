@@ -162,7 +162,7 @@ class Plotable(Generic[D, F]):
                 )
                 kw.update({"vmin": vmin, "vmax": vmax})
 
-            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **(kwargs | kw))  # ty: ignore[invalid-argument-type]
+            artist = im = ax.pcolormesh(aval, oval, data, cmap=cmap, **(kwargs | kw))
             ax.set(
                 xlim=(aval.min(), aval.max()),
                 ylim=(oval.min(), oval.max()),
