@@ -678,10 +678,12 @@ class GasField(Generic[F]):
         new = object.__new__(GasField)
 
         field_kws: FieldAttrs[F] = {}
-        subs_cpy = subs.copy()
-        for k in ["name", "data", "coordinates"]:
-            if k in subs_cpy:
-                field_kws[k] = subs.pop(k)  # type: ignore[literal-required, misc]
+        if "name" in subs:
+            field_kws["name"] = subs.pop("name")
+        if "data" in subs:
+            field_kws["data"] = subs.pop("data")
+        if "coordinates" in subs:
+            field_kws["coordinates"] = subs.pop("coordinates")
         if field_kws:
             if "_field" in subs:
                 raise TypeError
