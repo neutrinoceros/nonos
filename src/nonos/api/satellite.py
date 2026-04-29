@@ -116,7 +116,7 @@ class NonosLick(Generic[F]):
                 "indexing": "xy",
             }
         else:
-            from lick.lick import lick_box  # type: ignore[import-not-found, no-redef]
+            from lick.lick import lick_box  # type: ignore
 
             lick_box_kwargs = {
                 "kernel_length": kernel_length,
