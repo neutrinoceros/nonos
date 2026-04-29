@@ -971,7 +971,7 @@ class GasField(Generic[F]):
     ) -> float:
         pd = self._load_planet(planet_number=planet_number, planet_file=planet_file)
         ind_on = self._get_ind_snapshot_uid(pd.t)
-        return float(pd.d[ind_on])  # type: ignore [attr-defined]
+        return float(pd.d[ind_on])
 
     def find_rhill(
         self,
