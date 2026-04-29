@@ -21,7 +21,7 @@ __all__ = [
 ]
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import (
@@ -114,14 +114,8 @@ class OrbitalElements(Generic[F]):
 
 
 @final
-@dataclass(frozen=True, eq=False)
+@dataclass(slots=True, frozen=True, eq=False)
 class PlanetData(Generic[F]):
-    # fields that are required at __init__
-    _init_attrs = ["x", "y", "z", "vx", "vy", "vz", "q", "t", "dt"]
-    # additional derived field that can be computed on the fly
-    _post_init_attrs = ["d"]
-    __slots__ = _init_attrs + _post_init_attrs
-
     # cartesian position
     x: FArray1D[F]
     y: FArray1D[F]
@@ -138,6 +132,9 @@ class PlanetData(Generic[F]):
     # time and timestep
     t: FArray1D[F]
     dt: FArray1D[F]
+
+    # post init fields
+    d: FArray1D[F] = field(init=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "d", np.sqrt(self.x**2 + self.y**2 + self.z**2))
@@ -173,12 +170,8 @@ class PlanetData(Generic[F]):
                 assert_never(unreachable)
 
     def get_rotational_rate(self) -> FArray1D[F]:
-        d = self.d  # type: ignore [attr-defined]
+        d = self.d
         return np.sqrt((1.0 + self.q) / pow(d, 3.0))  # type: ignore[no-any-return]
-
-
-for key in PlanetData._post_init_attrs:
-    PlanetData.__annotations__[key] = FArray1D
 
 
 @final
