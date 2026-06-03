@@ -9,17 +9,13 @@ import re
 import sys
 from io import BufferedReader
 from pathlib import Path
-from typing import Any, final
+from typing import Any, assert_never, final
 
 import numpy as np
 
 from nonos._types import BinData, F, FArray, FArray1D, FArray3D
 from nonos.geometry import Geometry
 
-if sys.version_info >= (3, 11):
-    from typing import assert_never
-else:
-    from typing_extensions import assert_never
 if sys.version_info >= (3, 13):
     from copy import replace
 else:
@@ -643,7 +639,7 @@ class FargoADSGReader:
         grid_shape = n3, n1, n2
 
         def _read_array(file: Path) -> FArray3D[F]:
-            return (  # type: ignore[no-any-return]
+            return (
                 np.fromfile(file, dtype="float64")
                 .reshape(grid_shape)
                 .transpose(1, 2, 0)

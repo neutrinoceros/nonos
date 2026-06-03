@@ -7,12 +7,7 @@ _BANDAGE = unicodedata.lookup("ADHESIVE BANDAGE")
 _SANGLIER = unicodedata.lookup("POULTRY LEG")
 _BONE = unicodedata.lookup("BONE")
 _SKULL = unicodedata.lookup("SKULL")
-
-if sys.version_info >= (3, 11):
-    _XRAY = unicodedata.lookup("X-RAY")
-else:
-    # hardcoding the character for Python 3.10 to workaround a lookup error
-    _XRAY = "🩻"
+_XRAY = unicodedata.lookup("X-RAY")
 
 
 def configure_logger(*, level: int | str = 30) -> None:

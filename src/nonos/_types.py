@@ -20,7 +20,6 @@ __all__ = [
     "StrDict",
 ]
 import os
-import sys
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -29,18 +28,15 @@ from typing import (
     Any,
     Generic,
     Protocol,
+    Self,
     TypeAlias,
     TypeVar,
+    assert_never,
     final,
 )
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
-
-if sys.version_info >= (3, 11):
-    from typing import Self, assert_never
-else:
-    from typing_extensions import Self, assert_never
 
 if TYPE_CHECKING:
     from nonos.geometry import Geometry

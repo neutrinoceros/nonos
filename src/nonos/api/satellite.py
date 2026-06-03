@@ -39,7 +39,7 @@ def file_analysis(
 
     columns = np.loadtxt(directory / filename, dtype="float64").T
     if norb is None:
-        return columns  # type: ignore[no-any-return]
+        return columns
 
     loader = Loader.resolve(
         code=code,
@@ -66,7 +66,7 @@ def file_analysis(
                 columns[i] = np.convolve(column, Ntmean, mode="valid")
     else:
         raise NotImplementedError
-    return columns  # type: ignore[no-any-return]
+    return columns
 
 
 InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]

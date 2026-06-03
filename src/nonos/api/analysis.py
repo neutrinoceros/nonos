@@ -17,7 +17,10 @@ from typing import (
     Generic,
     Literal,
     TypeAlias,
+    TypedDict,
     TypeVar,
+    Unpack,
+    assert_never,
     cast,
     final,
     overload,
@@ -56,11 +59,6 @@ from nonos.api._angle_parsing import (
 from nonos.api.tools import bracketing_values, closest_index, closest_value
 from nonos.geometry import Axis, Geometry
 from nonos.loaders import BUILTIN_RECIPES, Loader
-
-if sys.version_info >= (3, 11):
-    from typing import TypedDict, Unpack, assert_never
-else:
-    from typing_extensions import TypedDict, Unpack, assert_never
 
 if sys.version_info >= (3, 13):
     from warnings import deprecated
@@ -501,7 +499,7 @@ class Field(Generic[F]):
 
         return Field(
             name=self.name if keep_name else "<slice-result>",
-            data=self.data[tuple(sel)].reshape(new_shape),  # type: ignore[arg-type]
+            data=self.data[tuple(sel)].reshape(new_shape),
             coordinates=self.coordinates.slice_at_index(axis, idx),
         )
 

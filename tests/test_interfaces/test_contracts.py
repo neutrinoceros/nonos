@@ -11,7 +11,6 @@ a new change in design.
 """
 
 import inspect
-import sys
 from enum import Enum
 from types import ModuleType
 from typing import Protocol
@@ -20,12 +19,6 @@ import pytest
 
 import nonos._readers as readers
 from nonos import _types
-
-if sys.version_info < (3, 11):
-    pytest.skip(
-        reason="runtime inspection of final classes requires Python 3.11 or newer",
-        allow_module_level=True,
-    )
 
 
 def get_classes_from(module: ModuleType) -> list[type]:
