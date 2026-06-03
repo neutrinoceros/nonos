@@ -9,8 +9,8 @@ __all__ = [
 ]
 import sys
 from dataclasses import dataclass
-from enum import Enum, auto
-from typing import Any, Generic, Literal, TypeVar, cast, final, overload
+from enum import Enum, StrEnum, auto
+from typing import Any, Generic, Literal, TypeVar, assert_never, cast, final, overload
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
@@ -18,13 +18,6 @@ from numpy import float32 as f32, float64 as f64
 from nonos._integrity_checks import collect_dtype_exceptions, compile_exceptions
 from nonos._types import D, F, FArray, FArray1D, FArray2D, StrDict
 
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-    from typing import assert_never
-else:
-    from typing_extensions import assert_never
-
-    from nonos._backports import StrEnum
 if sys.version_info >= (3, 13):
     from copy import replace
     from warnings import deprecated
@@ -374,7 +367,7 @@ class Coordinates(Generic[F]):
             arr = self.x3
         else:
             raise AssertionError
-        return arr.copy()  # type: ignore[no-any-return]
+        return arr.copy()
 
     def get_axis_array_med(self, axis: Axis | str) -> FArray1D[F]:
         # convenience compatibility shim

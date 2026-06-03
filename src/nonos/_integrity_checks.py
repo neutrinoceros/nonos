@@ -4,13 +4,9 @@ __all__ = [
     "collect_shape_exceptions",
     "compile_exceptions",
 ]
-import sys
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-
-if sys.version_info < (3, 11):
-    from exceptiongroup import ExceptionGroup
 
 if TYPE_CHECKING:
     from nonos.api.analysis import Field
