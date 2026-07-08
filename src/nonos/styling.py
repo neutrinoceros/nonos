@@ -14,43 +14,28 @@ def scale_mpl(scaling: float) -> None:
     # https://github.com/mwaskom/seaborn/blob/a41703e7fddf8f66b1fd5f994f983b37e865a3b2/seaborn/rcmod.py#L439
     # https://github.com/mwaskom/seaborn/blob/a41703e7fddf8f66b1fd5f994f983b37e865a3b2/seaborn/rcmod.py#L338
 
-    # Set up dictionary of default parameters
-    texts_base_context = {
-        "font.size": 12,
-        "axes.labelsize": 12,
-        "axes.titlesize": 12,
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "legend.fontsize": 11,
-        "legend.title_fontsize": 12,
+    mpl.rcParams |= {
+        "font.size": 12.0 * scaling,
+        "axes.labelsize": 12.0 * scaling,
+        "axes.titlesize": 12.0 * scaling,
+        "xtick.labelsize": 11.0 * scaling,
+        "ytick.labelsize": 11.0 * scaling,
+        "legend.fontsize": 11.0 * scaling,
+        "legend.title_fontsize": 12.0 * scaling,
+        "axes.linewidth": 1.25 * scaling,
+        "grid.linewidth": 1.0 * scaling,
+        "lines.linewidth": 1.5 * scaling,
+        "lines.markersize": 6.0 * scaling,
+        "patch.linewidth": 1.0 * scaling,
+        "xtick.major.width": 1.25 * scaling,
+        "ytick.major.width": 1.25 * scaling,
+        "xtick.minor.width": 1.0 * scaling,
+        "ytick.minor.width": 1.0 * scaling,
+        "xtick.major.size": 6.0 * scaling,
+        "ytick.major.size": 6.0 * scaling,
+        "xtick.minor.size": 4.0 * scaling,
+        "ytick.minor.size": 4.0 * scaling,
     }
-
-    base_context = {
-        "axes.linewidth": 1.25,
-        "grid.linewidth": 1,
-        "lines.linewidth": 1.5,
-        "lines.markersize": 6,
-        "patch.linewidth": 1,
-        "xtick.major.width": 1.25,
-        "ytick.major.width": 1.25,
-        "xtick.minor.width": 1,
-        "ytick.minor.width": 1,
-        "xtick.major.size": 6,
-        "ytick.major.size": 6,
-        "xtick.minor.size": 4,
-        "ytick.minor.size": 4,
-    }
-    base_context.update(texts_base_context)
-
-    context_dict = {k: v * scaling for k, v in base_context.items()}
-
-    # the reason why the scaling are separated comes
-    # from seaborn where the font sizes are controlled
-    # by an independent factor, so I'm keeping the structure
-    # in case we want to do that as well later
-    font_dict = {k: context_dict[k] * scaling for k in texts_base_context}
-    context_dict.update(font_dict)
-    mpl.rcParams.update(context_dict)
 
 
 @deprecated(
