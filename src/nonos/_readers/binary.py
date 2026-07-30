@@ -750,7 +750,6 @@ class NPYReader:
             k: np.array(v, dtype="float32") for k, v in header_data.items()
         }
         x1, x2, x3 = coordinates.values()
-        n1, n2, n3 = (len(x) for x in (x1, x2, x3))
 
         # field discovery
         fields_found: dict[str, Path] = {}
