@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Visualization tool for idefix/pluto/fargo3d (M)HD simulations of protoplanetary disks
 """
