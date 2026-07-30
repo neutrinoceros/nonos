@@ -88,7 +88,7 @@ class PColorMeshKwargs(TypedDict, total=False):
 
 
 class Plotable(Generic[D, F]):
-    __slots__ = ["abscissa", "ordinate", "field"]
+    __slots__ = ["abscissa", "field", "ordinate"]
 
     def __init__(
         self,
@@ -434,7 +434,7 @@ class Field(Generic[F]):
             coordinates=self.coordinates.astype(dtype),
         )
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         # checks are ordered from cheapest to most expensive
         # so False is returned as early as possible when other
         # is not comparable

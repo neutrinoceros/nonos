@@ -10,7 +10,7 @@ __all__ = [
 import sys
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
-from typing import Any, Generic, Literal, TypeVar, assert_never, cast, final, overload
+from typing import Generic, Literal, TypeVar, assert_never, cast, final, overload
 
 import numpy as np
 from numpy import float32 as f32, float64 as f64
@@ -296,7 +296,7 @@ class Coordinates(Generic[F]):
         if exc := compile_exceptions("multiple issues with input arrays", *excs):
             raise exc
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         # checks are ordered from cheapest to most expensive
         # so False is returned as early as possible when other
         # is not comparable
