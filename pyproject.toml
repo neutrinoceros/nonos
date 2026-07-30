@@ -84,7 +84,7 @@ ignore = [
     "E501",
     "PTH123", # `open()` should be replaced by `Path.open()`
 ]
-select = [
+extend-select = [
     "E",
     "F",
     "W",
