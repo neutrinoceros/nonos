@@ -756,8 +756,8 @@ class NPYReader:
         # field discovery
         fields_found: dict[str, Path] = {}
         haystack = NPYReader.get_bin_files(ref_file.parent)
-        for file in haystack:
-            match = NPYReader._filename_re.fullmatch(file.name)
+        for needle in haystack:
+            match = NPYReader._filename_re.fullmatch(needle.name)
             if match is None:
                 raise AssertionError
             prefix, _, field_name = match.group("full_name").rpartition("_")
@@ -765,7 +765,7 @@ class NPYReader:
                 continue
             if int(match.group("snapshot_uid")) != snapshot_uid:
                 continue
-            fields_found[field_name] = file
+            fields_found[field_name] = needle
 
         # sanity check: we should have rediscovered our starting file by now
         assert ref_file in fields_found.values()
