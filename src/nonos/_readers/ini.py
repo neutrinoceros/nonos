@@ -24,7 +24,7 @@ class IdefixVTKReader:
                 self.vtk = float(vtk[0])
 
         class IdefixIniHydro:
-            def __init__(self, rotation: list[Scalar]) -> None:  # noqa: B006
+            def __init__(self, rotation: list[Scalar]) -> None:
                 self.rotation = float(rotation[0])
                 if self.rotation != 0.0:
                     self.frame = FrameType.CONSTANT_ROTATION
