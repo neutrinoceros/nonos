@@ -130,15 +130,17 @@ class VTKReader:
                             f"Unknown value for GEOMETRY flag ({g!r}) was found in the VTK file."
                         )
 
-                    if meta["geometry"] is not None:
+                    if (
+                        meta["geometry"] is not None
+                        and thisgeometry != meta["geometry"]
+                    ):  # pragma: no cover
                         # We already have a proposed geometry, check that what is read from the file matches
-                        if thisgeometry != meta["geometry"]:  # pragma: no cover
-                            fid.close()
-                            raise ValueError(
-                                f"geometry argument ({meta['geometry']!r}) is "
-                                "inconsistent with GEOMETRY flag from the VTK file "
-                                f"({thisgeometry!r})"
-                            )
+                        fid.close()
+                        raise ValueError(
+                            f"geometry argument ({meta['geometry']!r}) is "
+                            "inconsistent with GEOMETRY flag from the VTK file "
+                            f"({thisgeometry!r})"
+                        )
                     V = replace(V, geometry=thisgeometry)
                 elif entry == "PERIODICITY":
                     # skip
