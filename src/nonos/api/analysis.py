@@ -264,7 +264,7 @@ def _arithmetic_field_operator(
     return decorator
 
 
-class FieldAttrs(Generic[F], TypedDict, total=False):
+class FieldAttrs(TypedDict, Generic[F], total=False):
     name: str
     data: FArray3D[F]
     coordinates: Coordinates[F]
@@ -504,7 +504,7 @@ class Field(Generic[F]):
         )
 
 
-class GasFieldReplaceKwargs(Generic[F], TypedDict, total=False):
+class GasFieldReplaceKwargs(TypedDict, Generic[F], total=False):
     _field: Field[F]
     name: str
     data: FArray3D[F]

@@ -72,7 +72,7 @@ def file_analysis(
 InterpMethod: TypeAlias = Literal["nearest", "linear", "cubic"]
 
 
-class F2DViewer(Generic[F], Protocol):  # type: ignore[misc]
+class F2DViewer(Protocol, Generic[F]):  # type: ignore[misc]
     def as_2dview(self) -> FArray2D[F]: ...
 
 
