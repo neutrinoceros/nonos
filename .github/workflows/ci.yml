@@ -54,11 +54,9 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         python-version: ${{ matrix.python-version }}
-        enable-cache: true
-        prune-cache: false
         cache-suffix: ${{ matrix.label }}
 
     - name: Build
@@ -95,11 +93,9 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         python-version: ${{ matrix.python-version }}
-        enable-cache: true
-        prune-cache: false
         cache-suffix: type-check
 
     - name: Typecheck
@@ -114,11 +110,9 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         python-version: '3.13'
-        enable-cache: true
-        prune-cache: false
         cache-suffix: image-test
 
     - name: Run Image Tests
@@ -163,12 +157,10 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
         # Use latest Python, so it understands all syntax.
         python-version: '3.13'
-        enable-cache: true
-        prune-cache: false
         cache-suffix: coverage
 
     - run: uv tool install coverage
@@ -204,10 +196,8 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        enable-cache: true
-        prune-cache: false
         cache-suffix: docs
     - name: Build
       run: |
@@ -226,10 +216,8 @@ jobs:
       with:
         fetch-depth: 0
         persist-credentials: false
-    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
       with:
-        enable-cache: true
-        prune-cache: false
         cache-suffix: pre-publish-checks
 
     - run: uv run scripts/pre_publish_checks.py
