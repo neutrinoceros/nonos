@@ -15,6 +15,7 @@ members = [
 constraints = [
     { name = "fonttools", specifier = ">=4.24.2" },
     { name = "jinja2", specifier = ">=2.10.2" },
+    { name = "kiwisolver", specifier = ">=1.4.4" },
     { name = "pyparsing", specifier = ">=2.4.0" },
 ]
 

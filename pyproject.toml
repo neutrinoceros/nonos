@@ -160,16 +160,17 @@ exclude_also = [
 
 [tool.uv]
 no-build-package = [
+    # "librt",  # https://github.com/la-niche/nonos/issues/761
     "numpy",
     "matplotlib",
     "pillow",
     "contourpy",
-    "kiwisolver",
+    # "kiwisolver",  # https://github.com/la-niche/nonos/issues/761
     "scipy",
 
     # all of the following are from pytest-mpl (directly or not)
     # these constraints should (mostly) become obsolete with https://github.com/matplotlib/pytest-mpl/pull/252
-    "markupsafe",
+    # "markupsafe",  # https://github.com/la-niche/nonos/issues/761
 ]
 
 constraint-dependencies = [
@@ -178,6 +179,7 @@ constraint-dependencies = [
     # via matplotlib 3.7
     "pyparsing>=2.4.0",
     "fonttools>=4.24.2",
+    "kiwisolver>=1.4.4",
 ]
 
 [tool.uv.workspace]
