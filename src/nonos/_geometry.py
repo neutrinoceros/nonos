@@ -425,7 +425,7 @@ class Coordinates(Generic[F]):
                 "grid spacing in the shift direction"
             )
 
-        return replace(  # type: ignore
+        return replace(
             self,
             **{attr: np.roll(self.get_axis_array(axis), shift=by)},  # type: ignore
         )
