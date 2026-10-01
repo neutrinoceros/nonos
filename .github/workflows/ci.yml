@@ -26,6 +26,7 @@ jobs:
         - '3.12'
         - '3.13'
         - '3.14'
+        - '3.15'
         label: ['']
         include:
         - os: ubuntu-22.04
@@ -39,13 +40,13 @@ jobs:
           install-args: --resolution=lowest --all-extras --compile-bytecode
           test-args: -Wdefault
         - os: ubuntu-latest
-          python-version: '3.14'
+          python-version: '3.14' # TODO: upgrade to 3.15 (blocked by scipy)
           install-args: --all-extras
           label: (full)
         - os: macos-latest
-          python-version: '3.14'
+          python-version: '3.15'
         - os: windows-latest
-          python-version: '3.14'
+          python-version: '3.15'
 
     name: ${{ matrix.os }}-py${{ matrix.python-version }} ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
@@ -84,6 +85,7 @@ jobs:
         - '3.12'
         - '3.13'
         - '3.14'
+        # - '3.15' # TODO: uncomment (blocked by librt)
 
     runs-on: ubuntu-latest
     name: type-checking
