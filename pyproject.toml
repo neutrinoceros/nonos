@@ -136,6 +136,13 @@ disallow_untyped_calls = false
 show_error_codes = true
 show_error_context = true
 
+[tool.coverage.paths]
+source = [
+    "/home/runner/work/nonos", # Ubuntu
+    "/Users/runner/work/nonos", # macOS
+    "d:\\a\\nonos", # Windows
+]
+
 [tool.coverage.run]
 source = [
     "src",
