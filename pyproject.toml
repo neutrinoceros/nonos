@@ -124,7 +124,7 @@ include = ["*/**/__init__.py"]
 deprecated = "ignore"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 
 # permanent overrides to strict mode
