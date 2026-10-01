@@ -18,7 +18,7 @@ else:
     from typing_extensions import deprecated
 
 
-def closest_index(arr: FArray1D[F], v: float, /) -> int:
+def closest_index(arr: FArray1D[F], v: float | F, /) -> int:
     """Find the index of the value in arr closest to v
 
     .. versionadded: 0.20.0
@@ -26,7 +26,7 @@ def closest_index(arr: FArray1D[F], v: float, /) -> int:
     return int((np.abs(arr - v)).argmin())
 
 
-def closest_value(arr: FArray1D[F], v: float, /) -> float:
+def closest_value(arr: FArray1D[F], v: float | F, /) -> float:
     """
     Find the value in arr closest to v
 
@@ -48,7 +48,7 @@ class Interval:
         return np.array((self.lo, self.hi), dtype=dtype)
 
 
-def bracketing_values(arr: FArray1D[F], v: float, /) -> Interval:
+def bracketing_values(arr: FArray1D[F], v: float | F, /) -> Interval:
     """
     Find the two values in arr, closest to v, sorted from low to high.
 
