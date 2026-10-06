@@ -5,6 +5,7 @@ These tests are at an intermediate between contract tests
 and integration tests.
 """
 
+from collections.abc import Mapping, Sequence
 from contextlib import nullcontext
 from types import GenericAlias
 from typing import Any
@@ -37,8 +38,8 @@ class CheckLoader:
     loader: Loader
     expected_n_bin_files: int
     expected_n_planet_files: int | None
-    expected_data_keys: list[str]
-    meta: dict[str, Any]
+    expected_data_keys: Sequence[str]
+    meta: Mapping[str, Any]
 
     @pytest.fixture
     def initloader(self, test_data_dir):
@@ -106,34 +107,34 @@ class CheckLoader:
 class TestIdefixLoader(CheckLoader):
     code = "idefix_vtk"
     parameter_file = ("idefix_planet3d", "idefix.ini")
-    meta = {"geometry": "polar"}
+    meta: Mapping[str, str] = {"geometry": "polar"}
     expected_n_bin_files = 2
     expected_n_planet_files = 1
-    expected_data_keys = ["RHO", "VX1", "VX2", "VX3"]
+    expected_data_keys: Sequence[str] = ["RHO", "VX1", "VX2", "VX3"]
 
 
 class TestPlutoLoader(CheckLoader):
     code = "pluto_vtk"
     parameter_file = ("pluto_spherical", "pluto.ini")
-    meta = {}
+    meta: Mapping[str, str] = {}
     expected_n_bin_files = 0
     expected_n_planet_files = None  # not implemented
-    expected_data_keys = []
+    expected_data_keys: Sequence[str] = []
 
 
 class TestFargo3DLoader(CheckLoader):
     code = "fargo3d"
     parameter_file = ("fargo3d_planet2d", "variables.par")
-    meta = {}
+    meta: Mapping[str, str] = {}
     expected_n_bin_files = 2
     expected_n_planet_files = 1
-    expected_data_keys = ["RHO"]
+    expected_data_keys: Sequence[str] = ["RHO"]
 
 
 class TestFargoADSGLoader(CheckLoader):
     code = "fargo-adsg"
     parameter_file = ("fargo_adsg_planet", "planetpendragon_200k.par")
-    meta = {}
+    meta: Mapping[str, str] = {}
     expected_n_bin_files = 1
     expected_n_planet_files = 1
-    expected_data_keys = ["RHO"]
+    expected_data_keys: Sequence[str] = ["RHO"]

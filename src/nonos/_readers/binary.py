@@ -78,7 +78,7 @@ class VTKReader:
         meta.setdefault("cell", "edges")
         meta.setdefault("computedata", True)
 
-        fid = open(file, "rb")
+        fid = open(file, "rb")  # noqa: SIM115
 
         # define our datastructure
         f32_be = np.dtype(">f4")  # Big endian single precision floats

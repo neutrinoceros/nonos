@@ -105,14 +105,7 @@ class TestFargoReaders:
 
     def test_unknown_frame(self, tmp_path, reader):
         body = self.compile(
-            "\n".join(
-                [
-                    "NINTERM 10",
-                    "DT 0.2",
-                    "FRAME TEST",
-                    "OMEGAFRAME 3.0",
-                ]
-            ),
+            "NINTERM 10\nDT 0.2\nFRAME TEST\nOMEGAFRAME 3.0",
             reader=reader,
         )
 

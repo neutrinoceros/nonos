@@ -109,7 +109,7 @@ class Readers(Generic[F]):
             loader = Loader(components=recipe, parameter_file=parameter_file)
             try:
                 loader.load_ini_file()
-            except Exception:
+            except ValueError:
                 continue
             else:
                 candidates.append(recipe)
