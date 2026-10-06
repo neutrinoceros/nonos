@@ -1,4 +1,6 @@
+from collections.abc import Mapping
 from itertools import combinations
+from typing import Any
 
 import pytest
 
@@ -30,11 +32,11 @@ def mock_planet_azimuth_finder(*, planet_file: str) -> float:  # noqa: ARG001
 
 
 class TestParseRotationAngle:
-    example_inputs = {
+    example_inputs: Mapping[str, Any] = {
         "rotate_by": 1.0,
         "rotate_with": "planet0.dat",
     }
-    default_kwargs = {
+    default_kwargs: Mapping[str, Any] = {
         "rotate_by": None,
         "rotate_with": None,
         "planet_azimuth_finder": mock_planet_azimuth_finder,

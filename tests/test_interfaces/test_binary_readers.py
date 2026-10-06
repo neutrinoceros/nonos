@@ -36,8 +36,8 @@ class TestVTKReader:
             ),
         ],
     )
-    # fmt: on
     def test_fields(self, test_data_dir, file, expected_fields):
+        # fmt: on
         bd = VTKReader.read(test_data_dir.joinpath(*file))
         fields = sorted(bd.data.keys())
         assert fields == expected_fields

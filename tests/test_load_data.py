@@ -242,8 +242,8 @@ MID_AZIMUTH = object()
         pytest.param("polar_3d", 4, "azimuthal_average", (), "z"),
     ],
 )
-# fmt: on
 def test_api_vtk_slices_uidefix(test_data_dir, geometry, slice_no, operation_name, operation_args, axis):
+    # fmt: on
     on = 9
     ds = GasDataSet(test_data_dir / "idefix_vtk_slices" / geometry / f"data.{on:04d}.vtk")
     ds_phi_cut = GasDataSet(

@@ -1,6 +1,8 @@
 import operator
 import os
+from collections.abc import Mapping, Sequence
 from math import prod
+from typing import Any
 
 import numpy as np
 import numpy.testing as npt
@@ -224,9 +226,9 @@ class TestFileAnalysis:
 
 
 class TestGasDataSetFromNpy:
-    expected_keys = ["RHO"]
+    expected_keys: Sequence[str] = ["RHO"]
     args = (7283,)
-    kwargs = {"operation": "azimuthal_average"}
+    kwargs: Mapping[str, Any] = {"operation": "azimuthal_average"}
     directory = "pluto_spherical"
 
     def test_from_npy_implicit_directory(self, test_data_dir):
